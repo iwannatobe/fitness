@@ -1,0 +1,51 @@
+# Build artifacts
+.buildozer/
+.venv/
+.venv312/
+.idea/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+
+# Local AI config (claude/opencode settings)
+.claude/
+
+# Build cache and temp files
+_apk_extract/
+_pyc_backup/
+*.log
+*.orig
+*.db
+skills-lock.json
+app_*.txt
+app_debug.log
+
+# Local build scripts (one-off, not source)
+start_build*.sh
+stop_build.sh
+check_*.sh
+clone_*.sh
+copy_*.sh
+download_*.ps1
+find_*.sh
+fix_*.sh
+install_*.sh
+list_*.sh
+patch_*.sh
+place_*.sh
+rebuild_*.sh
+restore_*.sh
+run_build.sh
+sdkmanager_*.sh
+setup_*.sh
+build_*.sh
+
+# Kivy / Buildozer
+bin/
+*.apk
+
+# OS
+.DS_Store
+Thumbs.db

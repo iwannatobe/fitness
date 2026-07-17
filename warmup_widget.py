@@ -1,6 +1,7 @@
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
 from config import theme
@@ -46,7 +47,11 @@ class WarmupWidget(BoxLayout):
         hdr.add_widget(self._count)
         self.add_widget(hdr)
 
-        self._body = BoxLayout(orientation="vertical", size_hint=(1, 1))
+        self._body = ScrollView(size_hint=(1, 1), do_scroll_x=False, do_scroll_y=True)
+        self._body_inner = BoxLayout(orientation="vertical", size_hint_y=None,
+                                     spacing=dp(4))
+        self._body_inner.bind(minimum_height=self._body_inner.setter("height"))
+        self._body.add_widget(self._body_inner)
         self.add_widget(self._body)
         self.refresh()
 
@@ -54,14 +59,14 @@ class WarmupWidget(BoxLayout):
         self.refresh()
 
     def refresh(self):
-        self._body.clear_widgets()
+        self._body_inner.clear_widgets()
         plan = db.get_today_plan()
         if not plan:
             self._title.text = "当前目标"
             self._count.text = "—"
-            self._body.add_widget(Label(text="点击核爆按钮部署任务", color=theme.TEXT_MUTED,
-                                        font_size=dp(theme.FONT_CAPTION),
-                                        halign="center", valign="middle"))
+            self._body_inner.add_widget(Label(text="点击核爆按钮部署任务", color=theme.TEXT_MUTED,
+                                         font_size=dp(theme.FONT_CAPTION),
+                                         halign="center", valign="middle"))
             return
         total = len(plan)
         done = sum(1 for p in plan if p["completed"])
@@ -69,17 +74,17 @@ class WarmupWidget(BoxLayout):
         current = next((p for p in plan if not p["completed"]), None)
         if current is None:
             self._title.text = "全部完成"
-            self._body.add_widget(Label(text="[b]\u2713  训练完成[/b]", markup=True,
-                                        color=theme.ACCENT_CYAN, font_size=dp(theme.FONT_H2),
-                                        halign="center", valign="middle", bold=True))
+            self._body_inner.add_widget(Label(text="[b]\u2713  训练完成[/b]", markup=True,
+                                         color=theme.ACCENT_CYAN, font_size=dp(theme.FONT_H2),
+                                         halign="center", valign="middle", bold=True))
             return
         self._title.text = "当前目标"
         self._current_pid = current["id"]
-        self._body.add_widget(self._make_card(current))
+        self._body_inner.add_widget(self._make_card(current))
 
     def _make_card(self, p):
-        card = BoxLayout(orientation="vertical", padding=[dp(12), dp(8)], spacing=dp(4),
-                         size_hint=(1, 1))
+        card = BoxLayout(orientation="vertical", padding=[dp(10), dp(6)], spacing=dp(3),
+                         size_hint=(1, None))
         with card.canvas.before:
             Color(*theme.SURFACE_HIGH)
             RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(10)])
@@ -96,34 +101,13 @@ class WarmupWidget(BoxLayout):
                 elif isinstance(instr, Line):
                     instr.rounded_rectangle = (card.x, card.y, card.width, card.height, dp(10))
         card.bind(pos=redraw, size=redraw)
+        card.bind(minimum_height=card.setter("height"))
 
         name = p["exercise_name"]
         if p["item_type"] == "strength":
-            sets = int(p.get("target_sets") or 0)
-            reps = int(p.get("target_reps") or 0)
-            weight = float(p.get("target_weight") or 0)
-            ws = float(p.get("target_weight_step") or 0)
-            rs = int(p.get("target_rep_step") or 0)
-            if (ws or rs) and sets > 1:
-                end_w = weight + ws * (sets - 1)
-                end_r = int(reps + rs * (sets - 1))
-                w_lo = f"{weight:.0f}" if weight == int(weight) else f"{weight:.1f}"
-                w_hi = f"{end_w:.0f}" if end_w == int(end_w) else f"{end_w:.1f}"
-                r_lo = int(reps)
-                r_hi = end_r
-                if r_lo == r_hi:
-                    target = f"{sets}组 × {r_lo}次  {w_lo}→{w_hi}kg"
-                else:
-                    target = f"{sets}组 {r_lo}→{r_hi}次  {w_lo}→{w_hi}kg"
-            else:
-                parts = [f"{sets}组", f"{reps}次"]
-                if weight:
-                    parts.append(f"{weight:.0f}kg" if weight == int(weight) else f"{weight:.1f}kg")
-                target = " × ".join(parts)
             tag = "力量"
             tag_clr = theme.STRENGTH_ORANGE
         else:
-            target = f"{p.get('target_distance') or 0}km × {p.get('target_duration') or 0}min"
             tag = "有氧"
             tag_clr = theme.CARDIO_BLUE
 
@@ -138,24 +122,108 @@ class WarmupWidget(BoxLayout):
         name_lbl = Label(text=name, color=theme.TEXT_PRIMARY,
                          font_size=dp(14), bold=True,
                          halign="left", valign="middle",
-                         size_hint_y=None, height=dp(22))
+                         size_hint_y=None, height=dp(20))
         name_lbl.bind(width=lambda i, w: _fit_text(i, w, max_font=dp(14), min_font=dp(10)))
         card.add_widget(name_lbl)
 
-        target_lbl = Label(text=target, color=theme.TEXT_SECONDARY,
-                           font_size=dp(12),
-                           halign="left", valign="middle",
-                           size_hint_y=None, height=dp(18))
-        target_lbl.bind(width=lambda i, w: _fit_text(i, w, max_font=dp(12), min_font=dp(9)))
-        card.add_widget(target_lbl)
+        pid = p["id"]
+        stepper_row = BoxLayout(orientation="horizontal", size_hint_y=None,
+                                height=dp(40), spacing=dp(6))
+        self._make_main_steppers(stepper_row, p, pid)
+        card.add_widget(stepper_row)
+
+        if p["item_type"] == "strength":
+            step_row = BoxLayout(orientation="horizontal", size_hint_y=None,
+                                 height=dp(36), spacing=dp(6))
+            step_lbl = Label(text="递增减", color=theme.TEXT_MUTED,
+                             font_size=dp(9), size_hint_x=0.2,
+                             halign="right", valign="middle")
+            step_lbl.bind(size=step_lbl.setter("text_size"))
+            step_row.add_widget(step_lbl)
+            step_row.add_widget(self._make_stepper(pid, "target_weight_step",
+                                 float(p.get("target_weight_step") or 0), "kg/组", 0.5))
+            step_row.add_widget(self._make_stepper(pid, "target_rep_step",
+                                 int(p.get("target_rep_step") or 0), "次/组", 1))
+            self._step_preview = Label(text="", color=theme.ACCENT_CYAN, font_size=dp(9),
+                                       size_hint_x=1, halign="left", valign="middle")
+            self._step_preview.bind(size=self._step_preview.setter("text_size"))
+            step_row.add_widget(self._step_preview)
+            card.add_widget(step_row)
+            self._update_step_preview(p)
 
         done_btn = Button(text="[b]\u2713  完成此项[/b]", markup=True,
-                          size_hint=(1, None), height=dp(36),
+                          size_hint=(1, None), height=dp(32),
                           background_normal="", background_color=theme.GOLD,
                           color=(0.05, 0.05, 0.08, 1), font_size=dp(theme.FONT_LABEL))
         done_btn.bind(on_release=lambda _: self._toggle(self._current_pid))
         card.add_widget(done_btn)
         return card
+
+    def _make_main_steppers(self, row, p, pid):
+        if p["item_type"] == "strength":
+            row.add_widget(self._make_stepper(pid, "target_sets",
+                                     int(p.get("target_sets") or 0), "组", 1))
+            row.add_widget(self._make_stepper(pid, "target_reps",
+                                     int(p.get("target_reps") or 0), "次", 1))
+            row.add_widget(self._make_stepper(pid, "target_weight",
+                                     float(p.get("target_weight") or 0), "kg", 0.5))
+        else:
+            row.add_widget(self._make_stepper(pid, "target_distance",
+                                     float(p.get("target_distance") or 0), "km", 0.5))
+            row.add_widget(self._make_stepper(pid, "target_duration",
+                                     int(p.get("target_duration") or 0), "min", 1))
+
+    def _update_step_preview(self, p):
+        if not hasattr(self, "_step_preview"):
+            return
+        sets = int(p.get("target_sets") or 0)
+        reps = int(p.get("target_reps") or 0)
+        w = float(p.get("target_weight") or 0)
+        ws = float(p.get("target_weight_step") or 0)
+        rs = int(p.get("target_rep_step") or 0)
+        lbl = getattr(self, "_step_preview", None)
+        if lbl is None or sets <= 0:
+            return
+        per = []
+        for s in range(sets):
+            gw = w + ws * s
+            gr = reps + rs * s
+            per.append(f"{int(gw)}/{int(gr)}")
+        lbl.text = "  ".join(per)
+
+    def _make_stepper(self, pid, key, value, unit, step=1):
+        box = BoxLayout(orientation="vertical", size_hint_x=1, spacing=dp(0))
+
+        def fmt(v):
+            if step < 1:
+                return f"{v:g} {unit}"
+            return f"{int(v)} {unit}"
+
+        def bump(delta):
+            new = value + delta * step
+            if step < 1:
+                new = round(new, 2)
+                if new < 0:
+                    new = 0.0
+            else:
+                if new < 0:
+                    new = 0
+            db.update_plan_item(pid, **{key: new})
+            self.refresh()
+
+        up = Button(text="▲", background_normal="", background_color=theme.SURFACE_HIGH,
+                    color=theme.GOLD, font_size=dp(9),
+                    size_hint_y=None, height=dp(12))
+        up.bind(on_release=lambda _: bump(1))
+        val = Label(text=fmt(value), color=theme.TEXT_PRIMARY, font_size=dp(12), bold=True,
+                   halign="center", valign="middle", size_hint_y=None, height=dp(16))
+        val.bind(size=val.setter("text_size"))
+        down = Button(text="▼", background_normal="", background_color=theme.SURFACE_HIGH,
+                      color=theme.TEXT_MUTED, font_size=dp(9),
+                      size_hint_y=None, height=dp(12))
+        down.bind(on_release=lambda _: bump(-1))
+        box.add_widget(up); box.add_widget(val); box.add_widget(down)
+        return box
 
     def _toggle(self, pid):
         if pid is None:

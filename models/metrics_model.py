@@ -1,6 +1,6 @@
 from datetime import date
 from models.database import get_db
-from config.constants import CARDIO_MET, STRENGTH_CAL_FACTOR, STRENGTH_CAL_FACTORS, DEFAULT_REPS, DEFAULT_WEIGHT_KG, CARDIO_CAL_DEFAULT_MET
+from config.constants import CARDIO_MET, STRENGTH_MET, STRENGTH_MET_DEFAULT, DEFAULT_WEIGHT_KG, CARDIO_CAL_DEFAULT_MET
 
 def get_user_weight(date_str=None):
     if date_str is None: date_str = date.today().isoformat()
@@ -17,11 +17,17 @@ def set_user_weight(date_str, weight_kg):
     conn.commit(); conn.close()
 
 def calc_strength_calories(exercise_name, sets, reps, weight_kg, body_weight=None):
-    if body_weight is None: body_weight = get_user_weight()
-    reps = reps or DEFAULT_REPS
-    weight = weight_kg if weight_kg > 0 else body_weight * 0.4
-    factor = STRENGTH_CAL_FACTORS.get(exercise_name, STRENGTH_CAL_FACTOR)
-    return round(sets * reps * weight * factor * (body_weight / DEFAULT_WEIGHT_KG), 1)
+    """力量训练消耗：MET × 体重(kg) × (组数 × 2分钟) / 60
+
+    每组成估算 2 分钟（含动作执行 30-45s + 组间休息 + 准备），
+    参考《体力活动纲要》(Compendium of Physical Activities) 的 MET 值：
+    深蹲/硬拉 = 6.0，卧推/划船 = 5.5，孤立动作 = 3.5-4.0。
+    """
+    if body_weight is None:
+        body_weight = get_user_weight()
+    met = STRENGTH_MET.get(exercise_name, STRENGTH_MET_DEFAULT)
+    est_time_hours = (sets * 2.0) / 60.0
+    return round(met * body_weight * est_time_hours, 1)
 
 def calc_cardio_calories(exercise_type, duration_min, body_weight=None):
     if body_weight is None: body_weight = get_user_weight()

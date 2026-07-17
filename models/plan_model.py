@@ -29,3 +29,22 @@ def delete_plan_item(plan_id):
     conn = get_db()
     conn.execute("DELETE FROM daily_plan WHERE id = ?", (plan_id,))
     conn.commit(); conn.close()
+
+def update_plan_item(plan_id, **fields):
+    allowed = {
+        "target_sets", "target_reps", "target_weight",
+        "target_weight_step", "target_rep_step",
+        "target_distance", "target_duration",
+    }
+    cols = []
+    vals = []
+    for k, v in fields.items():
+        if k in allowed:
+            cols.append(f"{k} = ?")
+            vals.append(v)
+    if not cols:
+        return
+    conn = get_db()
+    vals.append(plan_id)
+    conn.execute(f"UPDATE daily_plan SET {', '.join(cols)} WHERE id = ?", vals)
+    conn.commit(); conn.close()

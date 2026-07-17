@@ -50,7 +50,23 @@ def init_db():
         CREATE TABLE IF NOT EXISTS user_metrics (
             id INTEGER PRIMARY KEY AUTOINCREMENT, record_date DATE UNIQUE, weight_kg REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS user_profile (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            gender TEXT DEFAULT 'male',
+            height_cm REAL DEFAULT 170,
+            age INTEGER DEFAULT 30,
+            activity_factor REAL DEFAULT 1.375,
+            deficit_goal INTEGER DEFAULT 500
+        );
+        CREATE TABLE IF NOT EXISTS meal_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, record_date DATE NOT NULL,
+            meal_type TEXT NOT NULL, food_summary TEXT NOT NULL,
+            calories REAL NOT NULL, items_json TEXT DEFAULT '',
+            source TEXT DEFAULT 'ai', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     """)
+    # 确保 user_profile 有默认行
+    conn.execute("INSERT OR IGNORE INTO user_profile (id) VALUES (1)")
     cols = [r[1] for r in conn.execute("PRAGMA table_info(daily_plan)").fetchall()]
     if "target_weight_step" not in cols:
         conn.execute("ALTER TABLE daily_plan ADD COLUMN target_weight_step REAL DEFAULT 0")

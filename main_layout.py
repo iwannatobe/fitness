@@ -21,6 +21,7 @@ from battle_report import show_battle_report
 from plan_popup import PlanPopup
 from warmup_widget import WarmupWidget
 from task_card import TaskCard
+from ai_chat import AIChatPanel
 from utils.card import CardHolder
 
 
@@ -98,7 +99,7 @@ class MainLayout(FloatLayout):
         self.add_widget(self.sidebar)
 
         self.sm = ScreenManager(transition=SlideTransition())
-        self._screen_order = ["home", "strength", "cardio", "body", "stats"]
+        self._screen_order = ["home", "strength", "cardio", "body", "stats", "ai"]
 
         screens = [
             ("home", "CALENDAR", self._build_home),
@@ -106,6 +107,7 @@ class MainLayout(FloatLayout):
             ("cardio", "CARDIO", self._build_cardio),
             ("body", "BODY", self._build_body),
             ("stats", "STATS", self._build_stats),
+            ("ai", "AI", self._build_ai),
         ]
         for name, title, builder in screens:
             s = Screen(name=name)
@@ -127,7 +129,7 @@ class MainLayout(FloatLayout):
                          spacing=dp(theme.CARD_SPACING))
 
         top_row = BoxLayout(orientation="horizontal",
-                            size_hint_y=None, height=dp(180),
+                            size_hint_y=None, height=dp(220),
                             spacing=dp(theme.CARD_SPACING))
         nuke_btn = NukeButton(size_hint=(1, 1))
         nuke_btn.bind(on_release=lambda instance: self._do_nuke(instance))
@@ -165,6 +167,7 @@ class MainLayout(FloatLayout):
         return self._cardio_panel
     def _build_body(self): return BodyPanel(self)
     def _build_stats(self): return StatsPanel()
+    def _build_ai(self): return AIChatPanel()
 
     def _do_nuke(self, btn):
         is_first = not btn.nuked_today

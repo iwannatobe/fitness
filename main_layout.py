@@ -174,10 +174,11 @@ class MainLayout(FloatLayout):
         if is_first:
             db.add_nuke_marker(date.today().isoformat())
             btn.nuked_today = True
-        popup = PlanPopup(on_confirm=lambda: self._on_plan_confirmed(btn))
+        popup = PlanPopup(on_confirm=lambda tid: self._on_plan_confirmed(btn, tid))
         self.add_widget(popup)
 
-    def _on_plan_confirmed(self, btn):
+    def _on_plan_confirmed(self, btn, template_id=None):
+        self._nuke_template_id = template_id
         self.refresh_heatmap(); self._task_card.refresh()
         if hasattr(self, "_warmup"): self._warmup.show_warmups_for(db.get_today_plan())
         shake_widget(self.sm); flash_screen(self)
@@ -191,6 +192,43 @@ class MainLayout(FloatLayout):
         if hasattr(self, "_task_card"): self._task_card.refresh()
         if hasattr(self, "_strength_panel"): self._strength_panel._refresh_list()
         if hasattr(self, "_cardio_panel"): self._cardio_panel._refresh_list()
+        # 全部完成 → 把当前训练量同步回模板
+        self._sync_to_template_if_all_done()
+
+    def _sync_to_template_if_all_done(self):
+        tid = getattr(self, "_nuke_template_id", None)
+        if tid is None:
+            return
+        plan = db.get_today_plan()
+        if not plan or not all(p["completed"] for p in plan):
+            return
+        tmpls = db.get_templates()
+        tmpl = next((t for t in tmpls if t["id"] == tid), None)
+        if not tmpl:
+            self._nuke_template_id = None
+            return
+        updated_items = []
+        for tp_item in tmpl["items"]:
+            plan_item = next(
+                (p for p in plan
+                 if p["exercise_name"] == tp_item.get("name")
+                 and p["item_type"] == tp_item.get("type")), None)
+            if plan_item:
+                new_item = dict(tp_item)
+                if plan_item["item_type"] == "strength":
+                    new_item["sets"] = plan_item.get("target_sets") or tp_item.get("sets", 0)
+                    new_item["reps"] = plan_item.get("target_reps") or tp_item.get("reps", 0)
+                    new_item["weight"] = plan_item.get("target_weight") or tp_item.get("weight", 0)
+                    new_item["weight_step"] = int(plan_item.get("target_weight_step") or tp_item.get("weight_step", 0))
+                    new_item["rep_step"] = int(plan_item.get("target_rep_step") or tp_item.get("rep_step", 0))
+                else:
+                    new_item["distance"] = plan_item.get("target_distance") or tp_item.get("distance", 0)
+                    new_item["duration"] = int(plan_item.get("target_duration") or tp_item.get("duration", 0))
+                updated_items.append(new_item)
+            else:
+                updated_items.append(tp_item)
+        db.update_template(tid, tmpl["name"], updated_items)
+        self._nuke_template_id = None
 
     def on_touch_down(self, touch):
         if self.sidebar_open and touch.x > dp(220):

@@ -151,12 +151,24 @@ class WarmupWidget(BoxLayout):
             card.add_widget(step_row)
             self._update_step_preview(p)
 
-        done_btn = Button(text="[b]\u2713  完成此项[/b]", markup=True,
-                          size_hint=(1, None), height=dp(32),
-                          background_normal="", background_color=theme.GOLD,
-                          color=(0.05, 0.05, 0.08, 1), font_size=dp(theme.FONT_LABEL))
-        done_btn.bind(on_release=lambda _: self._toggle(self._current_pid))
-        card.add_widget(done_btn)
+        done_btns = BoxLayout(orientation="horizontal", size_hint_y=None,
+                              height=dp(32), spacing=dp(6))
+        hard_btn = Button(text="[b]太吃力[/b]", markup=True, size_hint_x=1,
+                          background_normal="", background_color=(0.92, 0.26, 0.26, 1),
+                          color=(1, 1, 1, 1), font_size=dp(theme.FONT_CAPTION))
+        hard_btn.bind(on_release=lambda _: self._complete_with_difficulty(self._current_pid, "hard"))
+        done_btns.add_widget(hard_btn)
+        ok_btn = Button(text="[b]正好[/b]", markup=True, size_hint_x=1,
+                         background_normal="", background_color=theme.GOLD,
+                         color=(0.05, 0.05, 0.08, 1), font_size=dp(theme.FONT_CAPTION))
+        ok_btn.bind(on_release=lambda _: self._complete_with_difficulty(self._current_pid, "just_right"))
+        done_btns.add_widget(ok_btn)
+        easy_btn = Button(text="[b]很轻松[/b]", markup=True, size_hint_x=1,
+                          background_normal="", background_color=(0.16, 0.75, 0.35, 1),
+                          color=(1, 1, 1, 1), font_size=dp(theme.FONT_CAPTION))
+        easy_btn.bind(on_release=lambda _: self._complete_with_difficulty(self._current_pid, "easy"))
+        done_btns.add_widget(easy_btn)
+        card.add_widget(done_btns)
         return card
 
     def _make_main_steppers(self, row, p, pid):
@@ -225,13 +237,28 @@ class WarmupWidget(BoxLayout):
         box.add_widget(up); box.add_widget(val); box.add_widget(down)
         return box
 
-    def _toggle(self, pid):
+    def _complete_with_difficulty(self, pid, level):
         if pid is None:
             return
         plan = db.get_today_plan()
         item = next((p for p in plan if p["id"] == pid), None)
-        if item and not item["completed"]:
-            self._write_record(item)
+        if item is None or item["completed"]:
+            return
+        self._write_record(item)
+        if item["item_type"] == "strength" and level != "just_right":
+            weight = float(item.get("target_weight", 0) or 0)
+            reps = int(item.get("target_reps", 0) or 0)
+            if level == "hard":
+                new_weight = max(0, round(weight - 2.5, 1))
+                db.update_plan_item(pid, target_weight=new_weight)
+            elif level == "easy":
+                if reps >= 12:
+                    new_reps = reps
+                    new_weight = round(weight + 2.5, 1)
+                else:
+                    new_reps = reps + 1
+                    new_weight = weight
+                db.update_plan_item(pid, target_reps=new_reps, target_weight=new_weight)
         db.complete_plan_item(pid)
         self.refresh()
         if self._on_complete:

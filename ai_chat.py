@@ -267,6 +267,23 @@ AI_TOOLS = [
             "parameters": {"type": "object", "properties": {}},
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "add_meal",
+            "description": "向今日饮食记录添加一餐。当用户口诉/打字说了吃了什么时，你分析食物种类和数量并估算热量后，调用此工具保存。示例：用户说「早餐吃了两个鸡蛋一碗粥」→ meal_type=早餐, food_summary=鸡蛋2个/粥1碗, total_kcal≈230",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "meal_type": {"type": "string", "enum": ["早餐", "午餐", "晚餐", "加餐"]},
+                    "food_summary": {"type": "string", "description": "食物摘要，如 鸡蛋2个140kcal/牛奶1杯90kcal"},
+                    "total_kcal": {"type": "number", "description": "该餐总热量千卡"},
+                    "items_json": {"type": "string", "description": "可选，JSON数组字符串：各食物明细"},
+                },
+                "required": ["meal_type", "food_summary", "total_kcal"],
+            },
+        },
+    },
 ]
 
 
@@ -1439,6 +1456,16 @@ class AIChatPanel(BoxLayout):
                     db.delete_meal(m["id"])
                 Clock.schedule_once(lambda dt: self._refresh_calorie_bar(), 0)
                 return f"ok: 已清空今日 {len(meals)} 条饮食记录"
+            if name == "add_meal":
+                db.add_meal(
+                    meal_type=args["meal_type"],
+                    food_summary=args["food_summary"],
+                    calories=args["total_kcal"],
+                    items_json=args.get("items_json", ""),
+                    source="ai",
+                )
+                Clock.schedule_once(lambda dt: self._refresh_calorie_bar(), 0)
+                return f"ok: 已添加{args['meal_type']}，{args['food_summary']}，约{int(args['total_kcal'])}kcal"
             return f"error: 未知工具 {name}"
         except Exception as e:
             return f"error: {e}"

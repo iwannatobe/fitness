@@ -7,7 +7,7 @@ package.domain = org.fitness
 source.dir = .
 source.include_exts = py,ttf,wav,atlas,png,gif
 
-version = 1.5
+version = 1.6
 
 icon.filename = assets/icons/icon.png
 presplash.filename = assets/icons/icon.png

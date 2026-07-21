@@ -373,7 +373,7 @@ class PlanPopup(FloatLayout):
             tmpl = next((t for t in db.get_templates() if t["id"] == self._current_tmpl_id), None)
             if tmpl:
                 db.update_template(self._current_tmpl_id, tmpl["name"], self._selected)
-        self._on_confirm()
+        self._on_confirm(self._current_tmpl_id)
         self._dismiss()
 
     def _dismiss(self):

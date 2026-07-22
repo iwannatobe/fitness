@@ -35,8 +35,9 @@ class CardioPanel(FormPanel):
         content = BoxLayout(orientation="vertical", spacing=dp(10), padding=dp(16))
         inp = TextInput(text="", multiline=False, font_size=dp(theme.FONT_BODY),
                         background_normal="", background_active="",
-                        background_color=theme.SURFACE_HIGH, foreground_color=theme.TEXT_PRIMARY,
-                        cursor_color=theme.GOLD, padding=(dp(10), dp(10)))
+                        background_color=theme.DISPLAY_GLASS, foreground_color=theme.TEXT_PRIMARY,
+                        cursor_color=theme.VFD_CYAN, padding=(dp(10), dp(10)))
+        self._frame_input(inp)
         content.add_widget(Label(text="输入运动名称", color=theme.TEXT_SECONDARY, font_size=dp(theme.FONT_BODY)))
         content.add_widget(inp)
         def on_ok(_):
@@ -47,12 +48,13 @@ class CardioPanel(FormPanel):
                 self._preset_grid.add_preset(name)
                 self._on_preset(name)
         ok_btn = Button(text="确定", size_hint_y=None, height=dp(44),
-                        background_normal="", background_color=theme.GOLD,
-                        color=(0.05, 0.05, 0.08, 1), font_size=dp(theme.FONT_H3), bold=True)
+                        background_normal="", background_color=theme.VFD_ORANGE,
+                        color=theme.CHASSIS, font_size=dp(theme.FONT_H3), bold=True)
+        self._frame_command(ok_btn)
         ok_btn.bind(on_release=on_ok)
         content.add_widget(ok_btn)
         popup = Popup(title="自定义运动", title_color=theme.TEXT_PRIMARY,
-                      content=content, size_hint=(0.75, 0.32), background_color=theme.SURFACE)
+                       content=content, size_hint=(0.75, 0.32), background_color=theme.PANEL)
         popup.open()
 
     def _show_popup(self, name, last):
@@ -71,14 +73,16 @@ class CardioPanel(FormPanel):
             inp = TextInput(text=default, multiline=False, font_size=dp(theme.FONT_BODY),
                             input_filter=None if key == "notes" else "float",
                             background_normal="", background_active="",
-                            background_color=theme.SURFACE_HIGH, foreground_color=theme.TEXT_PRIMARY,
-                            cursor_color=theme.GOLD, padding=(dp(10), dp(10)))
+                             background_color=theme.DISPLAY_GLASS, foreground_color=theme.TEXT_PRIMARY,
+                             cursor_color=theme.VFD_CYAN, padding=(dp(10), dp(10)))
+            self._frame_input(inp)
             fields[key] = inp
             row.add_widget(inp)
             content.add_widget(row)
         save_btn = Button(text="保存", size_hint_y=None, height=dp(44),
-                          background_normal="", background_color=theme.GOLD,
-                          color=(0.05, 0.05, 0.08, 1), font_size=dp(theme.FONT_H3), bold=True)
+                           background_normal="", background_color=theme.VFD_ORANGE,
+                           color=theme.CHASSIS, font_size=dp(theme.FONT_H3), bold=True)
+        self._frame_command(save_btn)
         popup_ref = []
         saved_scroll_y = self.form_scroll.scroll_y
         def on_save(_):
@@ -98,7 +102,7 @@ class CardioPanel(FormPanel):
         content.add_widget(save_btn)
         popup = Popup(title=name, title_color=theme.TEXT_PRIMARY,
                       content=content, size_hint=(0.82, 0.40),
-                      background_color=theme.SURFACE, separator_color=theme.BORDER)
+                       background_color=theme.PANEL, separator_color=theme.BORDER)
         popup_ref.append(popup)
         popup.open()
 

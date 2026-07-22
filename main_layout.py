@@ -5,7 +5,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.metrics import dp
-from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivy.graphics import Color, Line, Rectangle
 from datetime import date
 
 import theme
@@ -21,6 +21,8 @@ from warmup_widget import WarmupWidget
 from task_card import TaskCard
 from ai_chat import AIChatPanel
 from utils.card import CardHolder
+from utils.instrument import StatusLamp
+from utils.platform import get_app_version
 
 
 class PageBar(FloatLayout):
@@ -39,15 +41,24 @@ class PageBar(FloatLayout):
         if n < 2: return
         try: cur = self._names.index(self.sm.current)
         except ValueError: cur = 0
-        margin = dp(16); track_w = dp(4); track_h = self.height - margin * 2
+        margin = dp(16); track_w = dp(2); track_h = self.height - margin * 2
         track_x = self.center_x - track_w / 2; track_y = self.y + margin
-        pill_w = dp(18); pill_h = dp(36)
-        segment = track_h / (n - 1); pill_cx = self.center_x; pill_cy = track_y + cur * segment
+        segment = track_h / (n - 1)
         with self.canvas.before:
-            Color(*theme.SURFACE_LIGHT)
+            Color(*theme.METAL_DARK)
+            Rectangle(pos=(self.x + dp(7), self.y), size=(self.width - dp(14), self.height))
+            Color(*theme.METAL)
+            Line(rectangle=(self.x + dp(7), self.y, self.width - dp(14), self.height), width=dp(0.8))
+            Color(*theme.METAL_LIGHT)
             Rectangle(pos=(track_x, track_y), size=(track_w, track_h))
-            Color(*theme.GOLD)
-            Rectangle(pos=(pill_cx - pill_w / 2, pill_cy - pill_h / 2), size=(pill_w, pill_h))
+            for index in range(n):
+                cy = track_y + index * segment
+                active = index == cur
+                Color(*(theme.VFD_BLUE if active else theme.VFD_BLUE_DIM))
+                Rectangle(pos=(self.center_x - dp(7), cy - dp(3)), size=(dp(14), dp(6)))
+                Color(*(theme.METAL_LIGHT if active else theme.METAL_DARK))
+                Line(points=(self.center_x + dp(9), cy,
+                             self.center_x + dp(13), cy), width=dp(1))
 
     def on_touch_down(self, touch):
         if not self.collide_point(*touch.pos): return False
@@ -87,7 +98,7 @@ class MainLayout(FloatLayout):
         super().__init__(**kwargs)
 
     def init_ui(self):
-        self.sm = ScreenManager(transition=SlideTransition())
+        self.sm = ScreenManager(transition=SlideTransition(duration=0.18))
         self._screen_order = ["home", "strength", "cardio", "body", "stats", "ai"]
 
         screens = [
@@ -109,6 +120,9 @@ class MainLayout(FloatLayout):
         self.add_widget(self.sm)
         self._page_bar = PageBar(self._screen_order, self.sm)
         self.add_widget(self._page_bar)
+        self._boot_overlay = BootOverlay()
+        self.add_widget(self._boot_overlay)
+        Clock.schedule_once(lambda _dt: self._boot_overlay.finish(), 0.82)
 
     def _build_home(self):
         root = BoxLayout(orientation="vertical",
@@ -116,26 +130,44 @@ class MainLayout(FloatLayout):
                                   dp(theme.PAGE_MARGIN), dp(theme.PAGE_MARGIN)],
                          spacing=dp(theme.CARD_SPACING))
 
+        status = BoxLayout(size_hint_y=None, height=dp(24), spacing=dp(6),
+                           padding=[dp(7), 0])
+        with status.canvas.before:
+            Color(*theme.DISPLAY_GLASS)
+            self._home_status_bg = Rectangle(pos=status.pos, size=status.size)
+            Color(*theme.VFD_BLUE_DIM)
+            self._home_status_line = Line(rectangle=(*status.pos, *status.size), width=dp(0.8))
+        status.bind(pos=self._redraw_home_status, size=self._redraw_home_status)
+        status.add_widget(StatusLamp(color=theme.VFD_BLUE, breathe=True,
+                                     pos_hint={"center_y": 0.5}))
+        status_text = Label(text="[color=33ccff]SYSTEM ONLINE[/color]   今日训练控制台",
+                            markup=True, color=theme.TEXT_SECONDARY,
+                            font_size=dp(theme.FONT_CAPTION), halign="left", valign="middle")
+        status_text.bind(size=status_text.setter("text_size"))
+        status.add_widget(status_text)
+        root.add_widget(status)
+
         top_row = BoxLayout(orientation="horizontal",
-                            size_hint_y=None, height=dp(220),
+                            size_hint_y=None, height=dp(205),
                             spacing=dp(theme.CARD_SPACING))
         nuke_btn = NukeButton(size_hint=(1, 1))
         nuke_btn.bind(on_release=lambda instance: self._do_nuke(instance))
         nuke_box = BoxLayout(orientation="vertical", spacing=dp(2))
         nuke_box.add_widget(nuke_btn)
-        nuke_lbl = Label(text="[b]NUKE[/b]", markup=True, color=theme.TEXT_MUTED,
+        nuke_lbl = Label(text="[color=ff5500][b]PROGRAM DEPLOY[/b][/color]  核弹部署", markup=True,
+                         color=theme.TEXT_MUTED,
                          font_size=dp(theme.FONT_CAPTION), bold=True,
                          halign="center", valign="middle",
-                         size_hint_y=None, height=dp(12))
+                         size_hint_y=None, height=dp(28))
         nuke_lbl.bind(size=nuke_lbl.setter("text_size"))
         nuke_box.add_widget(nuke_lbl)
-        nuke_holder = CardHolder(nuke_box, padding=dp(8), bg=theme.SURFACE)
+        nuke_holder = CardHolder(nuke_box, padding=7, bg=theme.PANEL)
         nuke_holder.size_hint_x = 0.32
         top_row.add_widget(nuke_holder)
 
         self._warmup = WarmupWidget(size_hint=(1, 1),
                                     on_complete=self._on_task_completed)
-        warmup_holder = CardHolder(self._warmup, padding=dp(12), bg=theme.SURFACE)
+        warmup_holder = CardHolder(self._warmup, padding=9, bg=theme.PANEL)
         warmup_holder.size_hint_x = 0.68
         top_row.add_widget(warmup_holder)
         root.add_widget(top_row)
@@ -144,9 +176,14 @@ class MainLayout(FloatLayout):
         root.add_widget(self._task_card)
 
         self._heatmap = CalendarHeatmap()
-        heatmap_holder = CardHolder(self._heatmap, padding=dp(6), bg=theme.SURFACE)
+        heatmap_holder = CardHolder(self._heatmap, padding=6, bg=theme.PANEL)
         root.add_widget(heatmap_holder)
         return root
+
+    def _redraw_home_status(self, widget, *_):
+        self._home_status_bg.pos = widget.pos
+        self._home_status_bg.size = widget.size
+        self._home_status_line.rectangle = (*widget.pos, *widget.size)
 
     def _build_strength(self):
         self._strength_panel = StrengthPanel(self)
@@ -223,3 +260,64 @@ class MainLayout(FloatLayout):
     def refresh_heatmap(self):
         if hasattr(self, "_heatmap"): self._heatmap.refresh()
         if hasattr(self, "_task_card"): self._task_card.refresh()
+
+
+class BootOverlay(FloatLayout):
+    """Short cold-start hardware check; it never delays real initialization."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.opacity = 1
+        with self.canvas.before:
+            Color(*theme.CHASSIS)
+            self._background = Rectangle(pos=self.pos, size=self.size)
+            Color(*theme.METAL)
+            self._frame = Line(rectangle=(0, 0, 0, 0), width=dp(1))
+        self.bind(pos=self._draw, size=self._draw)
+        terminal = BoxLayout(orientation="vertical", size_hint=(0.78, None), height=dp(172),
+                             pos_hint={"center_x": 0.5, "center_y": 0.5},
+                             padding=[dp(16), dp(12)], spacing=dp(4))
+        with terminal.canvas.before:
+            Color(*theme.DISPLAY_GLASS)
+            self._terminal_bg = Rectangle(pos=terminal.pos, size=terminal.size)
+            Color(*theme.VFD_CYAN_DIM)
+            self._terminal_line = Line(rectangle=(*terminal.pos, *terminal.size), width=dp(1))
+        terminal.bind(pos=self._draw_terminal, size=self._draw_terminal)
+        lines = (
+            "[color=33ccff][b]FITNESS CONTROL TERMINAL[/b][/color]\n"
+            "[color=666f70]SYSTEM CHECK / 系统自检[/color]\n\n"
+            "DATABASE     [color=00ffcc]OK[/color]\n"
+            "TRAINING     [color=ff5500]READY[/color]\n"
+            "AI LINK      [color=33ccff]STANDBY[/color]\n\n"
+            f"[color=666f70]VERSION {get_app_version()}[/color]"
+        )
+        label = Label(text=lines, markup=True, color=theme.TEXT_PRIMARY,
+                      font_size=dp(theme.FONT_LABEL), halign="left", valign="middle")
+        label.bind(size=label.setter("text_size"))
+        terminal.add_widget(label)
+        self.add_widget(terminal)
+
+    def _draw(self, *_):
+        self._background.pos = self.pos
+        self._background.size = self.size
+        self._frame.rectangle = (self.x + dp(8), self.y + dp(8),
+                                 max(0, self.width - dp(16)), max(0, self.height - dp(16)))
+
+    def _draw_terminal(self, widget, *_):
+        self._terminal_bg.pos = widget.pos
+        self._terminal_bg.size = widget.size
+        self._terminal_line.rectangle = (*widget.pos, *widget.size)
+
+    def finish(self):
+        animation = Animation(opacity=0, duration=0.16)
+        animation.bind(on_complete=lambda *_: self.parent and self.parent.remove_widget(self))
+        animation.start(self)
+
+    def on_touch_down(self, touch):
+        return False
+
+    def on_touch_move(self, touch):
+        return False
+
+    def on_touch_up(self, touch):
+        return False

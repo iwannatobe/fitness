@@ -494,28 +494,28 @@ class _LogPopup(ModalView):
 
     def _build_ui(self):
         box = BoxLayout(orientation="vertical", spacing=dp(6), padding=dp(10))
-        title = Label(text="[b]错误日志[/b]（长按可选中复制）", markup=True,
-                      color=theme.TEXT_PRIMARY, font_size=dp(13), size_hint_y=None,
+        title = Label(text="[b]ERROR LOG / 错误日志[/b]  长按可选中复制", markup=True,
+                      color=theme.LED_RED, font_size=dp(12), size_hint_y=None,
                       height=dp(28))
         box.add_widget(title)
         self._ti = TextInput(
             text=self._gather(), readonly=True, multiline=True,
             size_hint_y=1, font_size=dp(10),
-            background_color=theme.SURFACE, foreground_color=theme.TEXT_PRIMARY)
+            background_color=theme.DISPLAY_GLASS, foreground_color=theme.TEXT_PRIMARY)
         box.add_widget(self._ti)
         btns = BoxLayout(orientation="horizontal", size_hint_y=None,
                          height=dp(44), spacing=dp(8))
         copy = Button(text="复制全部", background_normal="",
-                      background_color=theme.ACCENT_CYAN,
+                      background_color=theme.VFD_CYAN,
                       color=(0.04, 0.06, 0.1, 1), font_size=dp(12))
         copy.bind(on_release=lambda _: self._copy())
         refresh = Button(text="刷新", background_normal="",
-                        background_color=theme.SURFACE_HIGH,
+                        background_color=theme.PANEL_RAISED,
                         color=theme.TEXT_PRIMARY, font_size=dp(12))
         refresh.bind(on_release=lambda _: self._refresh())
         close = Button(text="关闭", background_normal="",
-                       background_color=theme.SURFACE_HIGH,
-                       color=theme.DANGER, font_size=dp(12))
+                       background_color=theme.PANEL_RAISED,
+                       color=theme.LED_RED, font_size=dp(12))
         close.bind(on_release=lambda _: self.dismiss())
         btns.add_widget(copy)
         btns.add_widget(refresh)
@@ -559,8 +559,8 @@ class _DeficitGoalPopup(ModalView):
     def _build_ui(self, current):
         box = BoxLayout(orientation="vertical", spacing=dp(10), padding=dp(16))
         box.add_widget(Label(
-            text="[b]热量目标赤字[/b]", markup=True,
-            color=theme.TEXT_PRIMARY, font_size=dp(15), size_hint_y=None,
+            text="[b]ENERGY TARGET / 热量目标赤字[/b]", markup=True,
+            color=theme.VFD_ORANGE, font_size=dp(13), size_hint_y=None,
             height=dp(26)))
         box.add_widget(Label(
             text="正值=减脂赤字(如500)\n负值=增肌盈余(如-300)\n0=维持",
@@ -568,9 +568,9 @@ class _DeficitGoalPopup(ModalView):
             height=dp(44), halign="left", valign="top"))
         center = BoxLayout(orientation="horizontal", size_hint_y=None,
                            height=dp(54), spacing=dp(8))
-        for v, txt, col in [(-300, "增肌+300", theme.STRENGTH_ORANGE),
-                            (0, "维持", theme.ACCENT_CYAN),
-                            (500, "减脂-500", theme.ACCENT_CYAN)]:
+        for v, txt, col in [(-300, "增肌+300", theme.VFD_ORANGE),
+                            (0, "维持", theme.VFD_CYAN),
+                            (500, "减脂-500", theme.VFD_CYAN)]:
             b = Button(text=txt, font_size=dp(11), background_normal="",
                        background_color=col, color=(0.04, 0.06, 0.1, 1),
                        size_hint_x=1)
@@ -580,19 +580,19 @@ class _DeficitGoalPopup(ModalView):
         self._ti = TextInput(text=str(current), font_size=dp(16),
                               foreground_color=theme.TEXT_PRIMARY,
                               background_normal="",
-                              background_color=theme.SURFACE,
-                              cursor_color=theme.GOLD,
+                               background_color=theme.DISPLAY_GLASS,
+                               cursor_color=theme.VFD_CYAN,
                               padding=[dp(8), dp(8)], size_hint_y=None,
                               height=dp(44), input_filter="int")
         box.add_widget(self._ti)
         btns = BoxLayout(orientation="horizontal", size_hint_y=None,
                          height=dp(44), spacing=dp(8))
         ok = Button(text="保存", background_normal="",
-                    background_color=theme.GOLD,
+                    background_color=theme.VFD_ORANGE,
                     color=(0.05, 0.05, 0.08, 1), font_size=dp(13))
         ok.bind(on_release=lambda _: self._save())
         cancel = Button(text="取消", background_normal="",
-                        background_color=theme.SURFACE_HIGH,
+                        background_color=theme.PANEL_RAISED,
                         color=theme.TEXT_MUTED, font_size=dp(13))
         cancel.bind(on_release=lambda _: self.dismiss())
         btns.add_widget(ok)
@@ -630,20 +630,20 @@ class _MealTypePopup(ModalView):
     def _build_ui(self):
         box = BoxLayout(orientation="vertical", spacing=dp(10), padding=dp(16))
         box.add_widget(Label(
-            text="[b]选择餐别[/b]", markup=True,
-            color=theme.TEXT_PRIMARY, font_size=dp(15), size_hint_y=None,
+            text="[b]MEAL INPUT / 选择餐别[/b]", markup=True,
+            color=theme.VFD_CYAN, font_size=dp(13), size_hint_y=None,
             height=dp(26)))
         grid = BoxLayout(orientation="horizontal", spacing=dp(8),
                          size_hint_y=None, height=dp(48))
         for m in self.MEALS:
             b = Button(text=m, font_size=dp(13), background_normal="",
-                       background_color=theme.ACCENT_CYAN,
+                       background_color=theme.VFD_CYAN,
                        color=(0.04, 0.06, 0.1, 1))
             b.bind(on_release=lambda _, mm=m: self._pick(mm))
             grid.add_widget(b)
         box.add_widget(grid)
         cancel = Button(text="取消", font_size=dp(12), background_normal="",
-                        background_color=theme.SURFACE_HIGH,
+                         background_color=theme.PANEL_RAISED,
                         color=theme.TEXT_MUTED, size_hint_y=None, height=dp(38))
         cancel.bind(on_release=lambda _: self.dismiss())
         box.add_widget(cancel)
@@ -668,8 +668,8 @@ class _MealsDetailPopup(ModalView):
     def _build_ui(self):
         box = BoxLayout(orientation="vertical", spacing=dp(8), padding=dp(14))
         box.add_widget(Label(
-            text="[b]今日饮食摄入[/b]", markup=True,
-            color=theme.GOLD, font_size=dp(14), size_hint_y=None, height=dp(26)))
+            text="[b]INTAKE LOG / 今日饮食摄入[/b]", markup=True,
+            color=theme.VFD_ORANGE, font_size=dp(13), size_hint_y=None, height=dp(26)))
         scroll = ScrollView(do_scroll_x=False)
         inner = BoxLayout(orientation="vertical", size_hint_y=None, spacing=dp(6))
         inner.bind(minimum_height=inner.setter("height"))
@@ -683,7 +683,7 @@ class _MealsDetailPopup(ModalView):
         self._total_lbl = total_lbl
         box.add_widget(total_lbl)
         close = Button(text="关闭", font_size=dp(13), background_normal="",
-                       background_color=theme.SURFACE_HIGH, color=theme.TEXT_MUTED,
+                       background_color=theme.PANEL_RAISED, color=theme.TEXT_MUTED,
                        size_hint_y=None, height=dp(40))
         close.bind(on_release=lambda _: self.dismiss())
         box.add_widget(close)
@@ -751,14 +751,15 @@ class _ImagePicker(ModalView):
                         spacing=dp(8), size_hint=(0.98, 0.98),
                         pos_hint={"center_x": 0.5, "center_y": 0.5})
         with box.canvas.before:
-            Color(*theme.SURFACE)
-            RoundedRectangle(pos=box.pos, size=box.size, radius=[dp(theme.CARD_RADIUS)])
-        box.bind(pos=lambda _, p: setattr(box, "pos", p) if False else None,
-                 size=lambda _, s: setattr(box, "size", s) if False else None)
+            Color(*theme.CHASSIS)
+            picker_bg = RoundedRectangle(pos=box.pos, size=box.size,
+                                         radius=[dp(theme.CARD_RADIUS)])
+        box.bind(pos=lambda _, p: setattr(picker_bg, "pos", p),
+                 size=lambda _, s: setattr(picker_bg, "size", s))
 
         hdr = BoxLayout(size_hint_y=None, height=dp(28))
-        hdr.add_widget(Label(text="[b]选择图片[/b]", markup=True,
-                             color=theme.GOLD, font_size=dp(15)))
+        hdr.add_widget(Label(text="[b]IMAGE INPUT / 选择图片[/b]", markup=True,
+                             color=theme.VFD_CYAN, font_size=dp(13)))
         close = Button(text="✕", size_hint_x=None, width=dp(32),
                        background_normal="", background_color=(0, 0, 0, 0),
                        color=theme.TEXT_MUTED, font_size=dp(15))
@@ -773,11 +774,11 @@ class _ImagePicker(ModalView):
 
         btns = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
         cancel = Button(text="取消", background_normal="",
-                        background_color=theme.SURFACE_HIGH,
+                         background_color=theme.PANEL_RAISED,
                         color=theme.TEXT_PRIMARY, font_size=dp(14))
         cancel.bind(on_release=lambda _: self.dismiss())
         ok = Button(text="确定", background_normal="",
-                    background_color=theme.GOLD,
+                    background_color=theme.VFD_CYAN,
                     color=(0.05, 0.05, 0.08, 1), font_size=dp(14))
         ok.bind(on_release=lambda _: self._confirm())
         btns.add_widget(cancel)
@@ -807,6 +808,11 @@ class AIChatPanel(BoxLayout):
 
     def _build_ui(self):
         root = BoxLayout(orientation="vertical")
+        with root.canvas.before:
+            Color(*theme.CHASSIS)
+            self._root_bg = Rectangle(pos=root.pos, size=root.size)
+        root.bind(pos=lambda _, p: setattr(self._root_bg, "pos", p),
+                  size=lambda _, s: setattr(self._root_bg, "size", s))
         root.add_widget(self._build_topbar())
         root.add_widget(self._build_calorie_bar())
 
@@ -828,13 +834,22 @@ class AIChatPanel(BoxLayout):
 
     def _build_topbar(self):
         bar = BoxLayout(orientation="horizontal", size_hint_y=None,
-                        height=dp(40), spacing=dp(8), padding=[dp(12), dp(4)])
+                        height=dp(44), spacing=dp(8), padding=[dp(12), dp(4)])
+        with bar.canvas.before:
+            Color(*theme.PANEL_RAISED)
+            top_bg = Rectangle(pos=bar.pos, size=bar.size)
+            Color(*theme.METAL_LIGHT)
+            top_line = Rectangle(pos=(bar.x, bar.y), size=(bar.width, dp(1)))
+        bar.bind(pos=lambda _, p: (setattr(top_bg, "pos", p),
+                                  setattr(top_line, "pos", p)),
+                 size=lambda _, s: (setattr(top_bg, "size", s),
+                                    setattr(top_line, "size", (s[0], dp(1)))))
         self._status_dot = Label(text="\u25cf", color=theme.TEXT_MUTED,
                                  font_size=dp(12), size_hint_x=None, width=dp(18))
         bar.add_widget(self._status_dot)
         self._status_lbl = Label(text="", color=theme.TEXT_MUTED,
-                                 font_size=dp(11), halign="left", valign="middle",
-                                 size_hint_x=1)
+                                  font_size=dp(11), halign="left", valign="middle",
+                                  size_hint_x=1)
         self._status_lbl.bind(size=self._status_lbl.setter("text_size"))
         bar.add_widget(self._status_lbl)
         log_btn = Button(text="[font=Symbols]\u2630[/font]", markup=True,
@@ -846,7 +861,7 @@ class AIChatPanel(BoxLayout):
         gear = Button(text="[font=Symbols]\u2699[/font]", markup=True,
                       size_hint_x=None, width=dp(40),
                       background_normal="", background_color=(0, 0, 0, 0),
-                      color=theme.GOLD, font_size=dp(18))
+                      color=theme.VFD_CYAN, font_size=dp(18))
         gear.bind(on_release=lambda _: self._open_settings())
         bar.add_widget(gear)
         return bar
@@ -863,7 +878,7 @@ class AIChatPanel(BoxLayout):
         bar = BoxLayout(orientation="horizontal", size_hint_y=None,
                         height=dp(36), spacing=dp(6), padding=[dp(12), dp(2)])
         with bar.canvas.before:
-            Color(*theme.SURFACE_HIGH)
+            Color(*theme.DISPLAY_GLASS)
             self._cbg = Rectangle(pos=bar.pos, size=bar.size)
         bar.bind(pos=lambda _, p: setattr(self._cbg, "pos", p),
                  size=lambda _, s: setattr(self._cbg, "size", s))
@@ -874,8 +889,8 @@ class AIChatPanel(BoxLayout):
             width=lambda lbl, w: setattr(lbl, "text_size", (w, None)))
         self._calorie_lbl.bind(on_ref_press=self._on_calorie_ref_press)
         bar.add_widget(self._calorie_lbl)
-        add_meal = Button(text="加餐识图", size_hint_x=None, width=dp(64),
-                         background_normal="", background_color=theme.ACCENT_CYAN,
+        add_meal = Button(text="识图录入", size_hint_x=None, width=dp(64),
+                          background_normal="", background_color=theme.VFD_CYAN,
                          color=(0.04, 0.06, 0.1, 1), font_size=dp(11))
         add_meal.bind(on_release=lambda _: self._open_meal_picker())
         bar.add_widget(add_meal)
@@ -923,9 +938,9 @@ class AIChatPanel(BoxLayout):
         bar = BoxLayout(orientation="horizontal", size_hint_y=None,
                         height=dp(54), spacing=dp(8), padding=[dp(12), dp(6)])
         with bar.canvas.before:
-            Color(*theme.SURFACE)
+            Color(*theme.PANEL)
             self._bbg = Rectangle(pos=bar.pos, size=bar.size)
-            Color(*theme.HAIRLINE)
+            Color(*theme.METAL_LIGHT)
             self._bline = Rectangle(pos=(bar.x, bar.top - dp(1)), size=(bar.width, dp(1)))
         bar.bind(
             pos=lambda _, p: (setattr(self._bbg, "pos", p),
@@ -935,27 +950,27 @@ class AIChatPanel(BoxLayout):
         )
         img_btn = Button(text="[font=Symbols]\u25ce[/font]", markup=True,
                          size_hint_x=None, width=dp(48),
-                         background_normal="", background_color=theme.SURFACE_HIGH,
-                         color=theme.GOLD, font_size=dp(16))
+                          background_normal="", background_color=theme.METAL_DARK,
+                          color=theme.VFD_ORANGE, font_size=dp(16))
         img_btn.bind(on_release=lambda _: self._open_image_picker())
         bar.add_widget(img_btn)
         voice_btn = Button(text="[font=Symbols]\u266a[/font]", markup=True,
                            size_hint_x=None, width=dp(48),
-                           background_normal="", background_color=theme.SURFACE_HIGH,
-                           color=theme.ACCENT_CYAN, font_size=dp(16))
+                            background_normal="", background_color=theme.METAL_DARK,
+                            color=theme.VFD_CYAN, font_size=dp(16))
         voice_btn.bind(on_press=self._voice_press, on_release=self._voice_release)
         self._voice_btn = voice_btn
         bar.add_widget(voice_btn)
         self._input = TextInput(multiline=False, font_size=dp(14),
                                 foreground_color=theme.TEXT_PRIMARY,
                                 background_normal="",
-                                background_color=theme.SURFACE_LIGHT,
-                                cursor_color=theme.GOLD, padding=[dp(10), dp(6)],
-                                hint_text="输入消息...", hint_text_color=theme.TEXT_MUTED)
+                                 background_color=theme.DISPLAY_GLASS,
+                                 cursor_color=theme.VFD_CYAN, padding=[dp(10), dp(6)],
+                                 hint_text="MESSAGE INPUT / 输入消息...", hint_text_color=theme.TEXT_MUTED)
         self._input.bind(on_text_validate=self._on_send)
         bar.add_widget(self._input)
         send = Button(text="发送", size_hint_x=None, width=dp(64),
-                      background_normal="", background_color=theme.GOLD,
+                       background_normal="", background_color=theme.VFD_BLUE,
                       color=(0.05, 0.05, 0.08, 1), font_size=dp(14))
         send.bind(on_release=lambda _: self._on_send())
         bar.add_widget(send)
@@ -1055,7 +1070,7 @@ class AIChatPanel(BoxLayout):
             self._m4a_path = m4a_path
             self._voice_cancel = False
             self._voice_btn.text = "●"
-            self._voice_btn.background_color = theme.DANGER
+            self._voice_btn.background_color = theme.LED_RED
             self._voice_btn.color = (1, 1, 1, 1)
             _plog(f"recording started: MediaRecorder m4a -> {m4a_path}")
         except Exception as e:
@@ -1076,8 +1091,8 @@ class AIChatPanel(BoxLayout):
             pass
         self._recorder = None
         self._voice_btn.text = "[font=Symbols]\u266a[/font]"
-        self._voice_btn.background_color = theme.SURFACE_HIGH
-        self._voice_btn.color = theme.ACCENT_CYAN
+        self._voice_btn.background_color = theme.METAL_DARK
+        self._voice_btn.color = theme.VFD_CYAN
         m4a_path = getattr(self, "_m4a_path", "")
         _plog(f"_stop_recording: m4a_path={m4a_path}")
         if m4a_path:
@@ -1108,8 +1123,8 @@ class AIChatPanel(BoxLayout):
                 pass
             self._recorder = None
         self._voice_btn.text = "[font=Symbols]\u266a[/font]"
-        self._voice_btn.background_color = theme.SURFACE_HIGH
-        self._voice_btn.color = theme.ACCENT_CYAN
+        self._voice_btn.background_color = theme.METAL_DARK
+        self._voice_btn.color = theme.VFD_CYAN
 
     def _send_audio(self, path):
         if self._busy:
@@ -1502,8 +1517,9 @@ class AIChatPanel(BoxLayout):
         return last_text or "（工具调用轮数超限）"
 
     def _open_settings(self):
-        AISettingsPopup().open()
-        self._settings_observer = Clock.schedule_interval(self._refresh_cfg, 0.3)
+        popup = AISettingsPopup()
+        popup.bind(on_dismiss=lambda *_: self._refresh_cfg())
+        popup.open()
 
     def _refresh_cfg(self, *_):
         cfg = LLMConfig.load()
@@ -1524,13 +1540,13 @@ class AIChatPanel(BoxLayout):
                 retry_base_delay=self._cfg.retry_base_delay, timeout=self._cfg.timeout,
             )
             self._messages = [{"role": "system", "content": self._cfg.system_prompt}]
-            self._status_dot.color = theme.ACCENT_CYAN
-            self._status_lbl.text = "已连接 " + self._cfg.model
+            self._status_dot.color = theme.LED_GREEN
+            self._status_lbl.text = "DATA LINK / 已连接  " + self._cfg.model
             self._render([("info", "已连接 " + self._cfg.model + "，可开始对话。")])
         else:
             self._messages = []
             self._status_dot.color = theme.TEXT_MUTED
-            self._status_lbl.text = "未配置"
+            self._status_lbl.text = "DATA LINK / 未配置"
             self._render([("info", "未配置。点击右上角齿轮填写 API Key 后保存。")])
 
     def _on_send(self, *_):
@@ -1634,24 +1650,35 @@ class _Bubble(BoxLayout):
     def __init__(self, kind, text, image=None, **kwargs):
         align = "left"
         if kind == "user":
-            bg, fg, align = theme.GOLD_DARK, theme.TEXT_PRIMARY, "right"
+            bg, fg, align = theme.VFD_BLUE, theme.CHASSIS, "right"
         elif kind == "ai":
-            bg, fg = theme.SURFACE_HIGH, theme.TEXT_PRIMARY
+            bg, fg = theme.DISPLAY_GLASS, theme.TEXT_PRIMARY
         elif kind == "typing":
-            bg, fg = theme.SURFACE_HIGH, theme.TEXT_MUTED
+            bg, fg = theme.DISPLAY_GLASS, theme.VFD_CYAN
         elif kind == "warn":
-            bg, fg = theme.SURFACE_HIGH, theme.DANGER
+            bg, fg = theme.DISPLAY_GLASS, theme.LED_RED
         else:
-            bg, fg = theme.SURFACE_LIGHT, theme.TEXT_SECONDARY
+            bg, fg = theme.PANEL, theme.TEXT_SECONDARY
         super().__init__(orientation="vertical", size_hint_y=None,
                          padding=[dp(12), dp(8)], spacing=dp(2), **kwargs)
         self._kind = kind
         self.bind(minimum_height=self.setter("height"))
         with self.canvas.before:
             Color(*bg)
-            self._r = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(theme.CARD_RADIUS)])
+            self._r = Rectangle(pos=self.pos, size=self.size)
+            Color(*(theme.VFD_BLUE if kind == "user" else theme.BORDER_DIM))
+            self._edge = Rectangle(pos=self.pos, size=(dp(2), self.height))
         self.bind(pos=lambda _, p: setattr(self._r, "pos", p),
                   size=lambda _, s: setattr(self._r, "size", s))
+        self.bind(pos=lambda _, p: setattr(self._edge, "pos", p),
+                  size=lambda _, s: setattr(self._edge, "size", (dp(2), s[1])))
+        source = {"user": "LOCAL TX", "ai": "AI DATA RX", "typing": "LINK ACTIVE",
+                  "warn": "SYSTEM ALERT"}.get(kind, "SYSTEM STATUS")
+        source_color = (theme.CHASSIS if kind == "user" else
+                        theme.LED_RED if kind == "warn" else theme.VFD_CYAN)
+        self.add_widget(Label(text=source, color=source_color,
+                              font_size=dp(9), size_hint_y=None, height=dp(12),
+                              halign="left", valign="middle"))
         if image:
             img = Image(source=image, size_hint_y=None, height=dp(150),
                        allow_stretch=True, keep_ratio=True)
@@ -1674,9 +1701,9 @@ class _Bubble(BoxLayout):
         def _set_inp_height(_inp):
             try:
                 lines = _inp._lines if hasattr(_inp, "_lines") else [""]
-                _inp.height = max(dp(24), len(lines) * _inp.line_height + _inp.padding[1] * 2 + dp(2))
+                _inp.height = max(dp(28), len(lines) * _inp.line_height + _inp.padding[1] * 2 + dp(2))
             except Exception:
-                _inp.height = dp(24)
+                _inp.height = dp(28)
 
         inp.bind(width=lambda i, w: _resize_inp(i))
         Clock.schedule_once(lambda dt: _resize_inp(inp))

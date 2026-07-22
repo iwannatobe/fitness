@@ -5,13 +5,13 @@ from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from kivy.metrics import dp
-from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
+from kivy.graphics import Color, Rectangle, Line
 from kivy.core.text import Label as CoreLabel
 from config import theme
 import database as db
 
 
-class _Pill(Button):
+class _ModeKey(Button):
     def __init__(self, text, active=False, width=None, **kwargs):
         sz = (dp(width or 56), dp(30))
         super().__init__(text=text, size_hint=(None, None), size=sz,
@@ -28,15 +28,15 @@ class _Pill(Button):
     def _draw(self, *_):
         self.canvas.before.clear()
         with self.canvas.before:
-            bg = theme.GOLD if self._active else theme.SURFACE_HIGH
-            fg = (0.05, 0.05, 0.08, 1) if self._active else theme.TEXT_SECONDARY
+            bg = theme.VFD_ORANGE if self._active else theme.METAL_DARK
             Color(*bg)
-            RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(self.height / 2)])
-            if not self._active:
-                Color(*theme.BORDER)
-                Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(self.height / 2)),
-                     width=dp(1))
-        self.color = (0.05, 0.05, 0.08, 1) if self._active else theme.TEXT_SECONDARY
+            Rectangle(pos=self.pos, size=self.size)
+            Color(*(theme.METAL_LIGHT if self._active else theme.BORDER))
+            Line(rectangle=(self.x, self.y, self.width, self.height), width=dp(1))
+            Color(*theme.GLASS_HIGHLIGHT)
+            Line(points=[self.x + dp(1), self.top - dp(1),
+                         self.right - dp(1), self.top - dp(1)], width=dp(1))
+        self.color = theme.CHASSIS if self._active else theme.TEXT_SECONDARY
 
 
 class StatsPanel(BoxLayout):
@@ -46,7 +46,15 @@ class StatsPanel(BoxLayout):
                                   dp(theme.PAGE_MARGIN), dp(theme.PAGE_MARGIN)], **kwargs)
         self._view_mode = "week"
         self._metric_mode = "cal"
+        with self.canvas.before:
+            Color(*theme.CHASSIS)
+            self._chassis = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self._sync_chassis, size=self._sync_chassis)
         self._build_ui()
+
+    def _sync_chassis(self, *_):
+        self._chassis.pos = self.pos
+        self._chassis.size = self.size
 
     def _build_ui(self):
         self.clear_widgets()
@@ -65,17 +73,29 @@ class StatsPanel(BoxLayout):
         self._wt_inp = TextInput(text=str(bw), multiline=False, size_hint_x=None,
                                   width=dp(64), halign="center",
                                   background_normal="", background_active="",
-                                  background_color=theme.SURFACE_HIGH,
-                                  foreground_color=theme.TEXT_PRIMARY,
+                                   background_color=theme.DISPLAY_GLASS,
+                                   foreground_color=theme.TEXT_PRIMARY,
+                                   cursor_color=theme.VFD_CYAN,
                                   font_size=dp(theme.FONT_BODY), padding=[0, dp(10)])
         self._wt_inp.bind(text=self._on_weight_change)
+        with self._wt_inp.canvas.before:
+            Color(*theme.BORDER)
+            self._wt_inp._display_border = Line(rectangle=(0, 0, 0, 0), width=dp(1))
+            Color(*theme.GLASS_HIGHLIGHT)
+            self._wt_inp._display_glint = Line(points=[], width=dp(1))
+
+        def sync_weight_display(inp, *_):
+            inp._display_border.rectangle = (inp.x, inp.y, inp.width, inp.height)
+            inp._display_glint.points = [inp.x + dp(1), inp.top - dp(1),
+                                         inp.right - dp(1), inp.top - dp(1)]
+        self._wt_inp.bind(pos=sync_weight_display, size=sync_weight_display)
         wt_bar.add_widget(self._wt_inp)
         wt_bar.add_widget(Label(text="kg", color=theme.TEXT_MUTED,
                                 font_size=dp(theme.FONT_LABEL), size_hint_x=None, width=dp(24)))
         wt_bar.add_widget(Label(text="", size_hint_x=1))
         self._content.add_widget(wt_bar)
 
-        self._content.add_widget(Label(text="今日汇总", color=theme.GOLD,
+        self._content.add_widget(Label(text="今日汇总", color=theme.VFD_ORANGE,
                                         font_size=dp(theme.FONT_H3), bold=True,
                                         size_hint_y=None, height=dp(22),
                                         halign="left", valign="middle"))
@@ -86,14 +106,14 @@ class StatsPanel(BoxLayout):
         toggle = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(6))
         self._view_pills = {}
         for mode, label, w in [("week", "本周", 56), ("month", "本月", 56), ("last_month", "上月", 56)]:
-            p = _Pill(label, active=(self._view_mode == mode), width=w)
+            p = _ModeKey(label, active=(self._view_mode == mode), width=w)
             p.bind(on_press=lambda _, m=mode: self._set_view(m))
             self._view_pills[mode] = p
             toggle.add_widget(p)
         toggle.add_widget(BoxLayout(size_hint_x=None, width=dp(8)))
         self._metric_pills = {}
         for metric, label, w in [("cal", "热量", 56), ("vol", "训练量", 72)]:
-            p = _Pill(label, active=(self._metric_mode == metric), width=w)
+            p = _ModeKey(label, active=(self._metric_mode == metric), width=w)
             p.bind(on_press=lambda _, m=metric: self._set_metric(m))
             self._metric_pills[metric] = p
             toggle.add_widget(p)
@@ -189,10 +209,10 @@ class StatsPanel(BoxLayout):
                                              height=dp(28), halign="center", valign="middle"))
         total_row = BoxLayout(size_hint_y=None, height=dp(26), spacing=dp(4),
                               padding=[dp(4), 0])
-        total_row.add_widget(Label(text="[b]总计[/b]", color=theme.GOLD,
+        total_row.add_widget(Label(text="[b]总计[/b]", color=theme.VFD_ORANGE,
                                    font_size=dp(theme.FONT_LABEL), markup=True,
                                    size_hint_x=0.40, halign="left", valign="middle"))
-        total_row.add_widget(Label(text=f"[b]{total_cal:.0f}[/b]", color=theme.GOLD,
+        total_row.add_widget(Label(text=f"[b]{total_cal:.0f}[/b]", color=theme.VFD_ORANGE,
                                    markup=True, font_size=dp(theme.FONT_H3),
                                    size_hint_x=0.24, halign="right", valign="middle"))
         total_row.add_widget(Label(text="", size_hint_x=0.36))
@@ -257,10 +277,13 @@ class ChartWidget(BoxLayout):
             return
         ox, oy = self.x, self.y
         with self.canvas.before:
-            Color(*theme.SURFACE)
-            RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(theme.CARD_RADIUS)])
+            Color(*theme.DISPLAY_GLASS)
+            Rectangle(pos=self.pos, size=self.size)
             Color(*theme.BORDER)
-            Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(theme.CARD_RADIUS)), width=dp(1))
+            Line(rectangle=(self.x, self.y, self.width, self.height), width=dp(1))
+            Color(*theme.GLASS_HIGHLIGHT)
+            Line(points=[self.x + dp(1), self.top - dp(1),
+                         self.right - dp(1), self.top - dp(1)], width=dp(1))
         margin_left = dp(42)
         margin_bottom = dp(24)
         margin_top = dp(20)
@@ -268,42 +291,47 @@ class ChartWidget(BoxLayout):
         chart_h = h - margin_bottom - margin_top
         bar_count = len(self._data)
         step = chart_w / bar_count
-        bar_w = max(dp(3), step * 0.6)
+        bar_w = max(dp(3), step * 0.62)
         max_val = max(self._data) if max(self._data) > 0 else 1
         baseline_y = oy + margin_bottom
         with self.canvas.before:
             Color(*theme.BORDER_DIM)
             Line(points=[ox + margin_left, baseline_y,
-                         ox + margin_left + chart_w, baseline_y], width=1)
+                          ox + margin_left + chart_w, baseline_y], width=1)
+            for grid_i in range(1, 5):
+                gy = baseline_y + chart_h * grid_i / 5
+                Line(points=[ox + margin_left, gy,
+                             ox + margin_left + chart_w, gy], width=dp(0.5))
             for i, val in enumerate(self._data):
                 bar_h = (val / max_val) * chart_h if val > 0 else 1
                 bx = ox + margin_left + i * step + step * 0.2
                 by = baseline_y
-                ratio = val / max_val if max_val > 0 else 0
-                r = 0.25 + 0.75 * ratio
-                g = 0.15 + 0.55 * ratio
-                b = 0.15 + 0.35 * (1 - ratio)
-                Color(r, g, b, 1)
-                Rectangle(pos=(bx, by), size=(bar_w, bar_h))
+                segment_h = dp(5)
+                segment_gap = dp(2)
+                segment_count = max(1, int(bar_h / (segment_h + segment_gap))) if val > 0 else 0
+                Color(*theme.VFD_CYAN)
+                for segment in range(segment_count):
+                    Rectangle(pos=(bx, by + segment * (segment_h + segment_gap)),
+                              size=(bar_w, segment_h))
             for i, val in enumerate(self._data):
                 bar_h = (val / max_val) * chart_h if val > 0 else 0
                 bx = ox + margin_left + i * step + step * 0.2
                 by = baseline_y + bar_h + dp(2)
                 if val > 0 and (bar_count <= 14 or i % max(1, bar_count // 10) == 0):
                     lbl = CoreLabel(text=str(int(val)), font_size=dp(11),
-                                    color=(0.7, 0.7, 0.75, 1), font_name="Roboto")
+                                    color=theme.VFD_CYAN, font_name="Roboto")
                     lbl.refresh()
                     tex, ts = lbl.texture, lbl.texture.size
                     with self.canvas.before:
-                        Color(0.7, 0.7, 0.75, 1)
+                        Color(*theme.VFD_CYAN)
                         Rectangle(texture=tex, pos=(bx + bar_w / 2 - ts[0] / 2, by), size=ts)
             for i, lbl_text in enumerate(self._labels):
                 bx = ox + margin_left + i * step + step * 0.2 + bar_w / 2
                 if bar_count <= 14 or i % max(1, bar_count // 10) == 0:
                     cl = CoreLabel(text=lbl_text, font_size=dp(10),
-                                   color=(0.5, 0.5, 0.55, 1), font_name="Roboto")
+                                    color=theme.TEXT_MUTED, font_name="Roboto")
                     cl.refresh()
                     tex, ts = cl.texture, cl.texture.size
                     with self.canvas.before:
-                        Color(0.5, 0.5, 0.55, 1)
+                        Color(*theme.TEXT_MUTED)
                         Rectangle(texture=tex, pos=(bx - ts[0] / 2, baseline_y - dp(14)), size=ts)

@@ -6,7 +6,7 @@ from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
 from kivy.metrics import dp
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, Line
 from kivy.properties import BooleanProperty
 import os
 
@@ -100,19 +100,21 @@ class PresetGrid(FloatLayout):
             else:
                 display = name
             btn = Button(text=display, markup=bool(icon),
-                         size_hint_y=None, height=dp(38),
-                         background_normal="", background_color=theme.SURFACE_HIGH,
-                         color=theme.TEXT_PRIMARY, font_size=dp(theme.FONT_LABEL))
+                          size_hint_y=None, height=dp(38),
+                          background_normal="", background_color=theme.METAL_DARK,
+                          color=theme.TEXT_PRIMARY, font_size=dp(theme.FONT_LABEL))
+            self._add_key_frame(btn)
             self._add_icon_strip(btn, EXERCISE_COLORS.get(name, theme.GOLD))
             btn.bind(on_release=lambda _, n=name: self._handle_tap(n))
-            sounds.bind_feedback(btn, bg_color=theme.SURFACE_HIGH)
+            sounds.bind_feedback(btn, bg_color=theme.METAL_DARK)
             self._grid.add_widget(btn)
             self._btn_map[name] = btn
         cb = Button(text="+ 自定义", size_hint_y=None, height=dp(38),
-                    background_normal="", background_color=theme.SURFACE,
-                    color=theme.TEXT_SECONDARY, font_size=dp(theme.FONT_LABEL))
+                    background_normal="", background_color=theme.VFD_ORANGE,
+                    color=theme.CHASSIS, font_size=dp(theme.FONT_LABEL), bold=True)
+        self._add_key_frame(cb, raised=True)
         cb.bind(on_release=lambda _: self._on_custom_cb())
-        sounds.bind_feedback(cb, bg_color=theme.SURFACE)
+        sounds.bind_feedback(cb, bg_color=theme.VFD_ORANGE)
         self._grid.add_widget(cb)
 
     def _add_icon_strip(self, btn, color):
@@ -123,6 +125,20 @@ class PresetGrid(FloatLayout):
         def update(*_):
             btn._icon_strip.size = (strip_w, btn.height - dp(8))
         btn.bind(size=update)
+
+    @staticmethod
+    def _add_key_frame(btn, raised=False):
+        with btn.canvas.before:
+            Color(*(theme.METAL_LIGHT if raised else theme.BORDER_DIM))
+            btn._key_top = Line(points=[], width=dp(1))
+            Color(*(theme.METAL_DARK if raised else theme.BORDER))
+            btn._key_border = Line(rectangle=(0, 0, 0, 0), width=dp(1))
+
+        def update(*_):
+            btn._key_border.rectangle = (btn.x, btn.y, btn.width, btn.height)
+            btn._key_top.points = [btn.x + dp(1), btn.top - dp(1),
+                                   btn.right - dp(1), btn.top - dp(1)]
+        btn.bind(pos=update, size=update)
 
     def _place_x_btns(self):
         for name, x_btn in self._x_btns.items():
@@ -135,10 +151,10 @@ class PresetGrid(FloatLayout):
             x_size = dp(20)
             x_btn = Button(text="X", size_hint=(None, None), size=(x_size, x_size),
                            pos=(rel_x + btn.width - x_size * 0.5, rel_y + btn.height - x_size * 0.5),
-                           background_normal="", background_color=theme.DANGER,
+                           background_normal="", background_color=theme.LED_RED,
                            color=(0.95,0.95,0.95,1), font_size=dp(12))
             x_btn.bind(on_release=lambda _, n=name: self._delete_preset(n))
-            sounds.bind_feedback(x_btn, bg_color=theme.DANGER)
+            sounds.bind_feedback(x_btn, bg_color=theme.LED_RED)
             self.add_widget(x_btn)
             self._x_btns[name] = x_btn
 

@@ -6,11 +6,13 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
-from kivy.uix.popup import Popup
+from kivy.uix.modalview import ModalView
+from kivy.uix.scrollview import ScrollView
 from kivy.clock import Clock
 from kivy.animation import Animation
-from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivy.graphics import Color, Line, Rectangle
 from kivy.metrics import dp
+from kivy.utils import escape_markup
 import theme
 import database as db
 import sounds
@@ -32,7 +34,9 @@ class RoundedButton(Button):
         self.canvas.before.clear()
         with self.canvas.before:
             Color(*self._bg_color)
-            RoundedRectangle(pos=self.pos, size=self.size, radius=[self._radius])
+            Rectangle(pos=self.pos, size=self.size)
+            Color(*theme.METAL_DARK)
+            Line(rectangle=(*self.pos, *self.size), width=dp(0.6))
     def set_color(self, bg_color):
         self._bg_color = bg_color
         self._draw()
@@ -107,19 +111,19 @@ class CalendarHeatmap(BoxLayout):
                 d_str = d.isoformat()
                 info = self.active_dates.get(d_str)
                 if d > today:
-                    clr = (0.05, 0.05, 0.07, 0.25)
+                    clr = (*theme.DISPLAY_OFF[:3], 0.25)
                     tclr = theme.TEXT_MUTED
                 elif info:
                     has_s = info.get("strength", False)
                     has_c = info.get("cardio", False)
                     if has_s and has_c:
-                        clr = theme.ACCENT; tclr = (0.05, 0.05, 0.08, 1)
+                        clr = theme.VFD_CYAN; tclr = theme.CHASSIS
                     elif has_s:
-                        clr = theme.STRENGTH_ORANGE; tclr = (0.05, 0.05, 0.08, 1)
+                        clr = theme.VFD_ORANGE; tclr = theme.CHASSIS
                     else:
-                        clr = theme.CARDIO_BLUE; tclr = (0.05, 0.05, 0.08, 1)
+                        clr = theme.VFD_BLUE; tclr = theme.CHASSIS
                 else:
-                    clr = theme.SURFACE_LIGHT; tclr = theme.TEXT_SECONDARY
+                    clr = theme.DISPLAY_OFF; tclr = theme.TEXT_SECONDARY
                 if d == today:
                     if info:
                         has_s = info.get("strength", False)
@@ -143,6 +147,9 @@ class CalendarHeatmap(BoxLayout):
         return grid
 
     def _build(self, *args):
+        if self._grid is not None:
+            Animation.cancel_all(self._grid)
+        self._animating = False
         self.clear_widgets()
         year = self._current_date.year
         month = self._current_date.month
@@ -154,7 +161,7 @@ class CalendarHeatmap(BoxLayout):
         pad_v = self._scale(10, scale)
         spacing = max(1, self._scale(2, scale))
         cols = 7
-        bottom_h = max(1, int(h * 0.03))
+        bottom_h = max(dp(30), int(h * 0.08))
         gap = max(1, self._scale(4, scale))
         grid_area_h = h - bottom_h - pad_v - gap
         cal_obj = cal.Calendar(firstweekday=0)
@@ -180,13 +187,13 @@ class CalendarHeatmap(BoxLayout):
                         spacing=self._scale(4, scale),
                         padding=[self._scale(8, scale), 0, self._scale(8, scale), 0])
         with bar.canvas.before:
-            Color(0.10, 0.105, 0.13, 0.9)
+            Color(*theme.DISPLAY_GLASS)
             self._bar_bg = Rectangle(pos=bar.pos, size=bar.size)
         bar.bind(pos=lambda _, p: setattr(self._bar_bg, "pos", p),
                  size=lambda _, s: setattr(self._bar_bg, "size", s))
         arrow_fs = max(1, int(font_size * 1.3))
         prev_btn = Button(text="<", size_hint=(None, None),
-                          size=(self._scale(24, scale), bottom_h),
+                          size=(dp(28), bottom_h),
                           background_normal="", background_color=(0,0,0,0),
                           font_size=arrow_fs, color=theme.TEXT_SECONDARY, bold=True)
         sounds.bind_feedback(prev_btn, text_color=theme.TEXT_SECONDARY)
@@ -199,45 +206,25 @@ class CalendarHeatmap(BoxLayout):
                              size_hint_x=None, width=self._scale(70, scale)))
         bar.add_widget(BoxLayout(size_hint_x=None, width=self._scale(6, scale)))
         next_btn = Button(text=">", size_hint=(None, None),
-                          size=(self._scale(24, scale), bottom_h),
+                          size=(dp(28), bottom_h),
                           background_normal="", background_color=(0,0,0,0),
                           font_size=arrow_fs, color=theme.TEXT_SECONDARY, bold=True)
         sounds.bind_feedback(next_btn, text_color=theme.TEXT_SECONDARY)
         next_btn.bind(on_release=lambda _: self._next_month())
         bar.add_widget(next_btn)
         lf = max(1, int(font_size * 0.75))
-        sq = max(1, bottom_h - 2)
+        sq = dp(12)
         for lbl_text, shade in [("力量", theme.STRENGTH_ORANGE), ("有氧", theme.CARDIO_BLUE), ("两者", theme.ACCENT)]:
             bar.add_widget(Label(text=lbl_text, font_size=lf, size_hint_x=None,
                                  width=self._scale(28, scale), color=theme.TEXT_MUTED))
             bar.add_widget(RoundedButton(bg_color=shade, color=(1,1,1,0),
                                          size_hint=(None, None), size=(sq, sq),
-                                         radius=sq / 2))
+                                         radius=0))
         bar.add_widget(BoxLayout())
         self.add_widget(bar)
 
     def _show_day(self, d_str):
-        s_rows, c_rows = db.get_date_detail(d_str)
-        lines = []
-        if s_rows:
-            lines.append("[b]力量训练[/b]")
-            for r in s_rows:
-                lines.append("  %s  %sx%s  %skg" % (r["exercise_name"], r["sets"], r["reps"], r["weight"]))
-        if c_rows:
-            if lines: lines.append("")
-            lines.append("[b]有氧运动[/b]")
-            for r in c_rows:
-                lines.append("  %s  %skm  %smin" % (r["exercise_type"], r["distance"], r["duration"]))
-        if not lines:
-            lines.append("无记录")
-        content = Label(text="\n".join(lines), color=theme.TEXT_PRIMARY,
-                        font_size=dp(14), markup=True, halign="left", valign="top",
-                        padding=(dp(16), dp(12)))
-        content.bind(size=content.setter("text_size"))
-        popup = Popup(title=d_str, title_color=theme.TEXT_PRIMARY,
-                      content=content, size_hint=(0.65, 0.35),
-                      background="", background_color=theme.SURFACE, border=(0,0,0,0))
-        popup.open()
+        DayDetailPopup(d_str).open()
 
     def _animate_switch(self, direction):
         if self._animating or not self._grid_area or not self._grid: return
@@ -257,18 +244,22 @@ class CalendarHeatmap(BoxLayout):
         cell_h = (grid_area_h - spacing * (total_rows - 1)) // total_rows if total_rows > 0 else 0
         cell_size = max(1, min(cell_w, cell_h))
         font_size = max(1, int(cell_size * 0.38))
+        grid_area = self._grid_area
         old_grid = self._grid
         new_grid = self._make_grid(year, month, w, cell_size, spacing, cols, font_size)
-        center_x = self._grid_area.x + (self._grid_area.width - new_grid.width) / 2
-        center_y = self._grid_area.y + (self._grid_area.height - new_grid.height) / 2
-        offset = self._grid_area.width if direction == -1 else -self._grid_area.width
+        center_x = grid_area.x + (grid_area.width - new_grid.width) / 2
+        center_y = grid_area.y + (grid_area.height - new_grid.height) / 2
+        offset = grid_area.width if direction == -1 else -grid_area.width
         new_grid.x = center_x + offset
         new_grid.y = center_y
-        self._grid_area.add_widget(new_grid)
-        anim_old = Animation(x=old_grid.x - offset, duration=0.25, transition="out_quart")
-        anim_new = Animation(x=center_x, duration=0.25, transition="out_quart")
+        grid_area.add_widget(new_grid)
+        anim_old = Animation(x=old_grid.x - offset, duration=0.18, transition="out_cubic")
+        anim_new = Animation(x=center_x, duration=0.18, transition="out_cubic")
         def on_complete(*_):
-            self._grid_area.remove_widget(old_grid)
+            if old_grid.parent is grid_area:
+                grid_area.remove_widget(old_grid)
+            if self._grid_area is not grid_area:
+                return
             self._grid = new_grid
             self._animating = False
         anim_new.bind(on_complete=on_complete)
@@ -291,3 +282,224 @@ class CalendarHeatmap(BoxLayout):
         self.active_dates = db.get_active_dates()
         self.nuked_dates = db.get_nuke_dates()
         self._build()
+
+
+class DayDetailPopup(ModalView):
+    def __init__(self, date_str, **kwargs):
+        super().__init__(size_hint=(0.94, 0.92), background="",
+                         background_color=theme.OVERLAY, **kwargs)
+        self.date_str = date_str
+        self.overview = db.get_date_overview(date_str)
+        self._build_ui()
+
+    def _build_ui(self):
+        data = self.overview
+        root = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(8))
+        with root.canvas.before:
+            Color(*theme.CHASSIS)
+            root_bg = Rectangle(pos=root.pos, size=root.size)
+            Color(*theme.METAL_LIGHT)
+            root_border = Line(rectangle=(*root.pos, *root.size), width=dp(1))
+        root.bind(
+            pos=lambda _, p: (setattr(root_bg, "pos", p),
+                              setattr(root_border, "rectangle", (*p, root.width, root.height))),
+            size=lambda _, s: (setattr(root_bg, "size", s),
+                               setattr(root_border, "rectangle", (root.x, root.y, *s))),
+        )
+
+        header = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
+        status = "NUKE LOG" if data["nuked"] else "DAILY LOG"
+        title = Label(
+            text=f"[color=33ccff][b]{status} / {self.date_str}[/b][/color]\n训练与身体数据记录",
+            markup=True, color=theme.TEXT_PRIMARY, font_size=dp(12),
+            halign="left", valign="middle",
+        )
+        title.bind(size=title.setter("text_size"))
+        header.add_widget(title)
+        close = Button(text="×", size_hint_x=None, width=dp(38),
+                       background_normal="", background_color=(0, 0, 0, 0),
+                       color=theme.TEXT_MUTED, font_size=dp(20))
+        close.bind(on_release=lambda *_: self.dismiss())
+        header.add_widget(close)
+        root.add_widget(header)
+
+        summary = BoxLayout(size_hint_y=None, height=dp(54), spacing=dp(6))
+        summary.add_widget(self._metric("INTAKE / 摄入", data["intake_calories"], "KCAL",
+                                        theme.VFD_ORANGE))
+        summary.add_widget(self._metric("OUTPUT / 训练", data["exercise_calories"], "KCAL",
+                                        theme.VFD_CYAN))
+        body_weight = next((row.get("weight") for row in data["body"]
+                            if row.get("weight") is not None), None)
+        summary.add_widget(self._metric("WEIGHT / 体重", body_weight, "KG",
+                                        theme.VFD_BLUE))
+        root.add_widget(summary)
+
+        scroll = ScrollView(do_scroll_x=False, bar_width=dp(3),
+                            scroll_type=["bars", "content"])
+        log = BoxLayout(orientation="vertical", size_hint_y=None, spacing=dp(8))
+        log.bind(minimum_height=log.setter("height"))
+        log.add_widget(self._section("NUTRITION INPUT / 热量与食谱", theme.VFD_ORANGE,
+                                     self._meal_lines(data)))
+        log.add_widget(self._section("PROGRAM / 训练模板与计划", theme.VFD_BLUE,
+                                     self._plan_lines(data)))
+        log.add_widget(self._section("TRAINING OUTPUT / 实际训练", theme.VFD_CYAN,
+                                     self._training_lines(data)))
+        log.add_widget(self._section("BODY SCAN / 身体数据", theme.LED_GREEN,
+                                     self._body_lines(data)))
+        scroll.add_widget(log)
+        root.add_widget(scroll)
+        self.add_widget(root)
+        sounds.bind_feedback(root)
+
+    def _metric(self, title, value, unit, color):
+        box = BoxLayout(orientation="vertical", padding=[dp(5), dp(3)])
+        with box.canvas.before:
+            Color(*theme.DISPLAY_GLASS)
+            bg = Rectangle(pos=box.pos, size=box.size)
+            Color(*theme.METAL_DARK)
+            border = Line(rectangle=(*box.pos, *box.size), width=dp(0.8))
+        box.bind(
+            pos=lambda _, p: (setattr(bg, "pos", p),
+                              setattr(border, "rectangle", (*p, box.width, box.height))),
+            size=lambda _, s: (setattr(bg, "size", s),
+                               setattr(border, "rectangle", (box.x, box.y, *s))),
+        )
+        box.add_widget(Label(text=title, color=theme.TEXT_MUTED,
+                             font_size=dp(9), halign="left", valign="middle"))
+        display = "--" if value is None else _number(value)
+        box.add_widget(Label(text=f"[b]{display}[/b]  {unit}", markup=True,
+                             color=color, font_size=dp(13),
+                             halign="left", valign="middle"))
+        for label in box.children:
+            label.bind(size=label.setter("text_size"))
+        return box
+
+    def _section(self, title, color, lines):
+        box = BoxLayout(orientation="vertical", size_hint_y=None,
+                        padding=[dp(8), dp(6)], spacing=dp(2))
+        box.bind(minimum_height=box.setter("height"))
+        with box.canvas.before:
+            Color(*theme.DISPLAY_GLASS)
+            bg = Rectangle(pos=box.pos, size=box.size)
+            Color(*theme.METAL_DARK)
+            border = Line(rectangle=(*box.pos, *box.size), width=dp(0.8))
+        box.bind(
+            pos=lambda _, p: (setattr(bg, "pos", p),
+                              setattr(border, "rectangle", (*p, box.width, box.height))),
+            size=lambda _, s: (setattr(bg, "size", s),
+                               setattr(border, "rectangle", (box.x, box.y, *s))),
+        )
+        heading = Label(text=f"[b]{title}[/b]", markup=True, color=color,
+                        font_size=dp(11), size_hint_y=None, height=dp(22),
+                        halign="left", valign="middle")
+        heading.bind(size=heading.setter("text_size"))
+        box.add_widget(heading)
+        if not lines:
+            lines = [("未记录", theme.TEXT_MUTED)]
+        for text, text_color in lines:
+            row = Label(text=text, markup=True, color=text_color,
+                        font_size=dp(12), size_hint_y=None,
+                        halign="left", valign="top")
+            row.bind(width=lambda widget, width:
+                     setattr(widget, "text_size", (max(0, width), None)))
+            row.bind(texture_size=lambda widget, size:
+                     setattr(widget, "height", max(dp(26), size[1] + dp(8))))
+            box.add_widget(row)
+        return box
+
+    def _meal_lines(self, data):
+        lines = []
+        for meal in data["meals"]:
+            meal_type = escape_markup(str(meal["meal_type"]))
+            food_summary = escape_markup(str(meal["food_summary"]))
+            lines.append((
+                f"[color=ff9d24][b]{meal_type}  {_number(meal['calories'])} KCAL[/b][/color]\n"
+                f"{food_summary}",
+                theme.TEXT_PRIMARY,
+            ))
+        if lines:
+            lines.append((f"TOTAL INTAKE  {_number(data['intake_calories'])} KCAL",
+                          theme.VFD_ORANGE))
+        return lines
+
+    def _plan_lines(self, data):
+        plans = data["plans"]
+        lines = []
+        template = escape_markup(str(data["template_name"] or "未匹配模板"))
+        done = sum(1 for item in plans if item.get("completed"))
+        if plans:
+            lines.append((f"TEMPLATE  [color=33ccff]{template}[/color]    "
+                          f"PROGRESS  {done}/{len(plans)}", theme.TEXT_PRIMARY))
+        for item in plans:
+            state = "DONE" if item.get("completed") else "WAIT"
+            state_color = "00e070" if item.get("completed") else "667070"
+            if item["item_type"] == "strength":
+                target = (f"{_number(item.get('target_sets'))}组 × "
+                          f"{_number(item.get('target_reps'))}次 × "
+                          f"{_number(item.get('target_weight'))}kg")
+                increments = []
+                if item.get("target_weight_step"):
+                    increments.append(f"{float(item['target_weight_step']):+g}kg/组")
+                if item.get("target_rep_step"):
+                    increments.append(f"{int(item['target_rep_step']):+d}次/组")
+                if increments:
+                    target += "  " + " / ".join(increments)
+            else:
+                target = (f"{_number(item.get('target_distance'))}km  "
+                          f"{_number(item.get('target_duration'))}min")
+            exercise_name = escape_markup(str(item["exercise_name"]))
+            lines.append((f"[color={state_color}][b]{state}[/b][/color]  "
+                          f"{exercise_name}  {target}", theme.TEXT_PRIMARY))
+        return lines
+
+    def _training_lines(self, data):
+        lines = []
+        grouped = {}
+        order = []
+        for row in data["strength"]:
+            key = (row["exercise_name"], row["reps"], row["weight"], row.get("notes") or "")
+            if key not in grouped:
+                grouped[key] = 0
+                order.append(key)
+            grouped[key] += row["sets"]
+        for name, reps, weight, notes in order:
+            detail = (f"{escape_markup(str(name))}  "
+                      f"{grouped[(name, reps, weight, notes)]}组 × {reps}次 × {_number(weight)}kg")
+            if notes:
+                detail += f"\nNOTE  {escape_markup(str(notes))}"
+            lines.append((detail, theme.TEXT_PRIMARY))
+        for row in data["cardio"]:
+            detail = (f"{escape_markup(str(row['exercise_type']))}  "
+                      f"{_number(row['distance'])}km  "
+                      f"{_number(row['duration'])}min")
+            if row.get("notes"):
+                detail += f"\nNOTE  {escape_markup(str(row['notes']))}"
+            lines.append((detail, theme.TEXT_PRIMARY))
+        if lines:
+            lines.append((f"TOTAL OUTPUT  {_number(data['exercise_calories'])} KCAL",
+                          theme.VFD_CYAN))
+        return lines
+
+    def _body_lines(self, data):
+        lines = []
+        labels = (("weight", "体重", "kg"), ("body_fat", "体脂", "%"),
+                  ("chest", "胸围", "cm"), ("waist", "腰围", "cm"),
+                  ("arm", "臂围", "cm"))
+        for record in data["body"]:
+            values = [f"{label} {_number(record.get(key))}{unit}"
+                      for key, label, unit in labels if record.get(key) is not None]
+            text = "    ".join(values) if values else "身体数据为空"
+            if record.get("notes"):
+                text += f"\nNOTE  {escape_markup(str(record['notes']))}"
+            lines.append((text, theme.TEXT_PRIMARY))
+        return lines
+
+
+def _number(value):
+    if value is None:
+        return "--"
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return str(int(number)) if number.is_integer() else f"{number:g}"

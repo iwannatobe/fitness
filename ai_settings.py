@@ -8,7 +8,7 @@ from kivy.uix.modalview import ModalView
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from kivy.metrics import dp
-from kivy.graphics import Color, RoundedRectangle, Line
+from kivy.graphics import Color, Rectangle, Line
 from config import theme
 from llm_config import LLMConfig
 import llm_client
@@ -51,28 +51,25 @@ class AISettingsPopup(ModalView):
     def _build_ui(self):
         root = BoxLayout(orientation="vertical")
         with root.canvas.before:
-            Color(*theme.SURFACE)
-            self._bg = RoundedRectangle(pos=root.pos, size=root.size, radius=[dp(theme.CARD_RADIUS)])
-            Color(*theme.BORDER)
-            self._line = Line(
-                rounded_rectangle=(root.x, root.y, root.width, root.height, dp(theme.CARD_RADIUS)),
-                width=dp(1),
-            )
+            Color(*theme.CHASSIS)
+            self._bg = Rectangle(pos=root.pos, size=root.size)
+            Color(*theme.METAL_LIGHT)
+            self._line = Line(rectangle=(*root.pos, *root.size), width=dp(1))
         root.bind(
             pos=lambda _, p: (setattr(self._bg, "pos", p),
-                               setattr(self._line, "rounded_rectangle",
-                                        (p[0], p[1], root.width, root.height, dp(theme.CARD_RADIUS)))),
+                               setattr(self._line, "rectangle",
+                                       (p[0], p[1], root.width, root.height))),
             size=lambda _, s: (setattr(self._bg, "size", s),
-                               setattr(self._line, "rounded_rectangle",
-                                        (root.x, root.y, s[0], s[1], dp(theme.CARD_RADIUS)))),
+                               setattr(self._line, "rectangle",
+                                       (root.x, root.y, s[0], s[1]))),
         )
-        root.padding = [dp(16), dp(14)]
-        root.spacing = dp(10)
+        root.padding = [dp(14), dp(12)]
+        root.spacing = dp(8)
 
-        hdr = BoxLayout(size_hint_y=None, height=dp(30))
-        hdr.add_widget(Label(text="[b]AI 设置[/b]", markup=True,
-                             color=theme.GOLD, font_size=dp(18),
-                             halign="left", valign="middle"))
+        hdr = BoxLayout(size_hint_y=None, height=dp(38))
+        hdr.add_widget(Label(text="[b]DATA LINK CONFIG[/b]\nAI 连接设置", markup=True,
+                             color=theme.VFD_CYAN, font_size=dp(13),
+                              halign="left", valign="middle"))
         close = Button(text="[font=Symbols]✕[/font]", markup=True,
                        size_hint_x=None, width=dp(36),
                        background_normal="", background_color=(0, 0, 0, 0),
@@ -81,10 +78,10 @@ class AISettingsPopup(ModalView):
         hdr.add_widget(close)
         root.add_widget(hdr)
 
-        preset_row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(5))
+        preset_row = GridLayout(cols=3, size_hint_y=None, height=dp(72), spacing=dp(5))
         for name in PROVIDERS:
             b = Button(text=name, markup=True, font_size=dp(theme.FONT_LABEL),
-                       background_normal="", background_color=theme.SURFACE_HIGH,
+                       background_normal="", background_color=theme.PANEL_RAISED,
                        color=theme.TEXT_SECONDARY)
             b.bind(on_release=lambda _, n=name: self._apply_preset(n))
             preset_row.add_widget(b)
@@ -116,13 +113,13 @@ class AISettingsPopup(ModalView):
 
         btn_row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(10))
         test_btn = Button(text="测试连接", background_normal="",
-                          background_color=theme.SURFACE_HIGH,
-                          color=theme.TEXT_PRIMARY, font_size=dp(14))
+                           background_color=theme.METAL_DARK,
+                           color=theme.TEXT_PRIMARY, font_size=dp(14))
         test_btn.bind(on_release=lambda _: self._test())
         btn_row.add_widget(test_btn)
         save_btn = Button(text="保存", background_normal="",
-                          background_color=theme.GOLD,
-                          color=(0.05, 0.05, 0.08, 1), font_size=dp(14))
+                           background_color=theme.VFD_CYAN,
+                           color=(0.05, 0.05, 0.08, 1), font_size=dp(14))
         save_btn.bind(on_release=lambda _: self._save())
         btn_row.add_widget(save_btn)
         root.add_widget(btn_row)
@@ -133,14 +130,14 @@ class AISettingsPopup(ModalView):
     def _field(self, title, value, password=False, multiline=False, height=dp(48), hint=""):
         box = BoxLayout(orientation="vertical", size_hint_y=None,
                         height=height + dp(16), spacing=dp(2))
-        lbl = Label(text=title, color=theme.TEXT_MUTED, font_size=dp(theme.FONT_LABEL),
+        lbl = Label(text=title.upper(), color=theme.METAL_LIGHT, font_size=dp(theme.FONT_LABEL),
                     halign="left", valign="middle", size_hint_y=None, height=dp(14))
         lbl.bind(size=lbl.setter("text_size"))
         box.add_widget(lbl)
         ti = TextInput(text=value, multiline=multiline, password=password,
                        font_size=dp(13), foreground_color=theme.TEXT_PRIMARY,
-                       background_normal="", background_color=theme.SURFACE_LIGHT,
-                       cursor_color=theme.GOLD, padding=[dp(8), dp(4)],
+                       background_normal="", background_color=theme.DISPLAY_GLASS,
+                       cursor_color=theme.VFD_CYAN, padding=[dp(8), dp(4)],
                        hint_text=hint, hint_text_color=theme.TEXT_MUTED)
         box.add_widget(ti)
         return box
@@ -149,7 +146,7 @@ class AISettingsPopup(ModalView):
         box = BoxLayout(orientation="vertical", size_hint_y=None,
                         spacing=dp(2))
         box.bind(minimum_height=box.setter("height"))
-        lbl = Label(text="Model", color=theme.TEXT_MUTED, font_size=dp(theme.FONT_LABEL),
+        lbl = Label(text="MODEL SELECT", color=theme.METAL_LIGHT, font_size=dp(theme.FONT_LABEL),
                     halign="left", valign="middle", size_hint_y=None, height=dp(14))
         lbl.bind(size=lbl.setter("text_size"))
         box.add_widget(lbl)
@@ -177,8 +174,8 @@ class AISettingsPopup(ModalView):
                            multiline=False, font_size=dp(13),
                            foreground_color=theme.TEXT_PRIMARY,
                            background_normal="",
-                           background_color=theme.SURFACE_LIGHT,
-                           cursor_color=theme.GOLD, padding=[dp(8), dp(6)],
+                            background_color=theme.DISPLAY_GLASS,
+                            cursor_color=theme.VFD_CYAN, padding=[dp(8), dp(6)],
                            hint_text="手填 model 名",
                            hint_text_color=theme.TEXT_MUTED,
                            size_hint_y=None, height=dp(38))
@@ -201,7 +198,7 @@ class AISettingsPopup(ModalView):
             label = info.get("labels", {}).get(m, m)
             b = Button(text=label, markup=True, font_size=dp(theme.FONT_LABEL),
                        size_hint_y=None, height=dp(32),
-                       background_normal="", background_color=theme.SURFACE_HIGH,
+                       background_normal="", background_color=theme.PANEL_RAISED,
                        color=theme.TEXT_SECONDARY)
             b.bind(on_release=lambda _, mm=m: self._select_model(mm))
             self._model_btns[m] = b
@@ -212,10 +209,10 @@ class AISettingsPopup(ModalView):
         self._selected_model = m
         for mm, b in self._model_btns.items():
             if mm == m:
-                b.background_color = theme.GOLD
+                b.background_color = theme.VFD_CYAN
                 b.color = (0.05, 0.05, 0.08, 1)
             else:
-                b.background_color = theme.SURFACE_HIGH
+                b.background_color = theme.PANEL_RAISED
                 b.color = theme.TEXT_SECONDARY
 
     def _read(self):

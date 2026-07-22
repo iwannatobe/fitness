@@ -1,6 +1,6 @@
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
-from kivy.graphics import Color, RoundedRectangle, Line
+from kivy.graphics import Color, Rectangle, Line
 from kivy.metrics import dp
 from config import theme
 
@@ -15,22 +15,29 @@ class Card(BoxLayout):
         self._border = border
         with self.canvas.before:
             Color(*self._bg)
-            self._bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[self._radius])
+            self._outer_rect = Rectangle(pos=self.pos, size=self.size)
+            Color(*self._bg)
+            self._bg_rect = Rectangle(pos=self.pos, size=self.size)
             if self._border:
                 Color(*theme.BORDER)
                 self._border_line = Line(
-                    rounded_rectangle=(self.x, self.y, self.width, self.height, self._radius),
+                    rectangle=(self.x, self.y, self.width, self.height),
                     width=dp(1),
                 )
+            Color(*theme.METAL_LIGHT)
+            self._top_edge = Rectangle(pos=self.pos, size=(self.width, dp(1)))
         self.bind(pos=self._redraw, size=self._redraw)
 
     def _redraw(self, *_):
-        self._bg_rect.pos = self.pos
-        self._bg_rect.size = self.size
+        self._outer_rect.pos = self.pos
+        self._outer_rect.size = self.size
+        inset = dp(2)
+        self._bg_rect.pos = (self.x + inset, self.y + inset)
+        self._bg_rect.size = (max(0, self.width - inset * 2), max(0, self.height - inset * 2))
+        self._top_edge.pos = (self.x + dp(1), self.top - dp(2))
+        self._top_edge.size = (max(0, self.width - dp(2)), dp(1))
         if self._border:
-            self._border_line.rounded_rectangle = (
-                self.x, self.y, self.width, self.height, self._radius
-            )
+            self._border_line.rectangle = (self.x, self.y, self.width, self.height)
 
 
 class CardHolder(FloatLayout):
@@ -44,13 +51,17 @@ class CardHolder(FloatLayout):
         self._pad = dp(padding)
         with self.canvas.before:
             Color(*self._bg)
-            self._bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[self._radius])
+            self._outer_rect = Rectangle(pos=self.pos, size=self.size)
+            Color(*self._bg)
+            self._bg_rect = Rectangle(pos=self.pos, size=self.size)
             if self._border:
                 Color(*theme.BORDER)
                 self._border_line = Line(
-                    rounded_rectangle=(self.x, self.y, self.width, self.height, self._radius),
+                    rectangle=(self.x, self.y, self.width, self.height),
                     width=dp(1),
                 )
+            Color(*theme.METAL_LIGHT)
+            self._top_edge = Rectangle(pos=self.pos, size=(self.width, dp(1)))
         self.bind(pos=self._redraw, size=self._redraw)
         self._child = child
         child.pos_hint = {}
@@ -59,12 +70,15 @@ class CardHolder(FloatLayout):
         self.bind(pos=self._layout_child, size=self._layout_child)
 
     def _redraw(self, *_):
-        self._bg_rect.pos = self.pos
-        self._bg_rect.size = self.size
+        self._outer_rect.pos = self.pos
+        self._outer_rect.size = self.size
+        inset = dp(2)
+        self._bg_rect.pos = (self.x + inset, self.y + inset)
+        self._bg_rect.size = (max(0, self.width - inset * 2), max(0, self.height - inset * 2))
+        self._top_edge.pos = (self.x + dp(1), self.top - dp(2))
+        self._top_edge.size = (max(0, self.width - dp(2)), dp(1))
         if self._border:
-            self._border_line.rounded_rectangle = (
-                self.x, self.y, self.width, self.height, self._radius
-            )
+            self._border_line.rectangle = (self.x, self.y, self.width, self.height)
 
     def _layout_child(self, *_):
         p = self._pad

@@ -1,7 +1,7 @@
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.metrics import dp
-from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
+from kivy.graphics import Color, Rectangle, Line
 from config import theme
 import database as db
 
@@ -12,19 +12,17 @@ class TaskCard(BoxLayout):
                          size_hint_y=None, height=dp(88),
                          padding=[dp(theme.CARD_PADDING), dp(12)],
                          spacing=dp(6), **kwargs)
-        self._radius = dp(theme.CARD_RADIUS)
         with self.canvas.before:
-            Color(*theme.SURFACE)
-            self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[self._radius])
+            Color(*theme.PANEL)
+            self._bg = Rectangle(pos=self.pos, size=self.size)
             Color(*theme.BORDER)
-            self._border = Line(
-                rounded_rectangle=(self.x, self.y, self.width, self.height, self._radius),
-                width=dp(1),
-            )
+            self._border = Line(rectangle=(*self.pos, *self.size), width=dp(1))
+            Color(*theme.METAL_LIGHT)
+            self._top_edge = Rectangle(pos=self.pos, size=(self.width, dp(1)))
         self.bind(pos=self._redraw, size=self._redraw)
 
-        header = BoxLayout(size_hint_y=None, height=dp(18), spacing=dp(6))
-        self._title = Label(text="[b]今日任务[/b]", markup=True,
+        header = BoxLayout(size_hint_y=None, height=dp(30), spacing=dp(6))
+        self._title = Label(text="[color=ff5500][size=10sp]MISSION STATUS[/size][/color]\n[b]今日任务[/b]", markup=True,
                             color=theme.TEXT_PRIMARY, font_size=dp(theme.FONT_H3),
                             halign="left", valign="middle", size_hint_x=1)
         self._title.bind(size=self._title.setter("text_size"))
@@ -36,15 +34,11 @@ class TaskCard(BoxLayout):
         header.add_widget(self._count)
         self.add_widget(header)
 
-        self._track = BoxLayout(size_hint_y=None, height=dp(6), padding=0)
+        self._track = BoxLayout(size_hint_y=None, height=dp(8), padding=0)
         self._progress_ratio = 0.0
         with self._track.canvas.before:
-            Color(*theme.SURFACE_HIGH)
-            self._track_bg = RoundedRectangle(pos=self._track.pos, size=self._track.size,
-                                               radius=[dp(3)])
-            Color(*theme.GOLD)
-            self._track_fill = RoundedRectangle(pos=self._track.pos, size=(0, dp(6)),
-                                                 radius=[dp(3)])
+            Color(*theme.DISPLAY_GLASS)
+            self._track_bg = Rectangle(pos=self._track.pos, size=self._track.size)
         self._track.bind(pos=self._redraw_track, size=self._redraw_track)
         self.add_widget(self._track)
 
@@ -58,22 +52,29 @@ class TaskCard(BoxLayout):
     def _redraw(self, *_):
         self._bg.pos = self.pos
         self._bg.size = self.size
-        self._border.rounded_rectangle = (self.x, self.y, self.width, self.height, self._radius)
+        self._border.rectangle = (*self.pos, *self.size)
+        self._top_edge.pos = (self.x + dp(1), self.top - dp(2))
+        self._top_edge.size = (max(0, self.width - dp(2)), dp(1))
 
     def _redraw_track(self, *_):
         self._track_bg.pos = self._track.pos
         self._track_bg.size = self._track.size
-        fill_w = max(0, self._track.width * self._progress_ratio)
-        if fill_w > 0 and fill_w < dp(6):
-            fill_w = dp(6)
-        self._track_fill.pos = (self._track.x, self._track.y)
-        self._track_fill.size = (fill_w, dp(6))
+        self._track.canvas.after.clear()
+        segments = 24
+        gap = dp(2)
+        segment_w = max(dp(1), (self._track.width - gap * (segments - 1)) / segments)
+        lit = round(self._progress_ratio * segments)
+        with self._track.canvas.after:
+            for index in range(segments):
+                Color(*(theme.VFD_CYAN if index < lit else theme.VFD_CYAN_DIM))
+                Rectangle(pos=(self._track.x + index * (segment_w + gap), self._track.y + dp(1)),
+                          size=(segment_w, max(0, self._track.height - dp(2))))
 
     def refresh(self):
         plan = db.get_today_plan()
         if not plan:
             self._progress_ratio = 0.0
-            self._title.text = "[b]今日任务[/b]"
+            self._title.text = "[color=ff5500][size=10sp]MISSION STATUS[/size][/color]\n[b]今日任务[/b]"
             self._count.text = "—"
             self._count.color = theme.TEXT_MUTED
             self._sub.text = "点击核爆按钮生成计划"
@@ -84,9 +85,9 @@ class TaskCard(BoxLayout):
         self._progress_ratio = done / total if total else 0
         self._count.text = f"{done}/{total}"
         self._count.color = theme.GOLD if done < total else theme.ACCENT_CYAN
-        self._title.text = "[b]今日任务[/b]"
-        gold_hex = "ffb400"
-        muted_hex = "8588a0"
+        self._title.text = "[color=ff5500][size=10sp]MISSION STATUS[/size][/color]\n[b]今日任务[/b]"
+        gold_hex = "00ffcc"
+        muted_hex = "666f70"
         parts = []
         for p in plan[:6]:
             if p["completed"]:

@@ -1,7 +1,7 @@
 from kivy.uix.button import Button
 from kivy.animation import Animation
 from kivy.clock import Clock
-from kivy.graphics import Color, Ellipse, Line, RoundedRectangle, Triangle
+from kivy.graphics import Color, Ellipse, Line, Rectangle, Triangle
 from kivy.properties import BooleanProperty, NumericProperty
 from kivy.metrics import dp
 import math
@@ -10,12 +10,12 @@ import theme
 import database as db
 import sounds
 
-_BG_NORMAL = (0.10, 0.11, 0.14, 1)
-_BG_NUKED = (0.18, 0.08, 0.06, 1)
-_ICON_NORMAL = theme.GOLD
-_ICON_NUKED = theme.GOLD_DARK
-_METAL = (0.20, 0.21, 0.25, 1)
-_METAL_DARK = (0.055, 0.06, 0.075, 1)
+_BG_NORMAL = theme.PANEL
+_BG_NUKED = (0.16, 0.035, 0.018, 1)
+_ICON_NORMAL = theme.VFD_ORANGE
+_ICON_NUKED = theme.LED_RED
+_METAL = theme.METAL
+_METAL_DARK = theme.METAL_DARK
 
 class NukeButton(Button):
     nuked_today = BooleanProperty(False)
@@ -69,11 +69,9 @@ class NukeButton(Button):
         outer_r = unit * 0.38
         face_r = outer_r * 0.78
         hub_r = face_r * 0.26
-        radius = [dp(theme.CARD_RADIUS)]
-
         with self.canvas.before:
             Color(*bg)
-            RoundedRectangle(pos=(x, y), size=(w, h), radius=radius)
+            Rectangle(pos=(x, y), size=(w, h))
             # Soft status glow stays inside the rectangular control panel.
             Color(icon[0], icon[1], icon[2], self._glow * 0.45)
             glow_r = outer_r * 1.18
@@ -88,7 +86,7 @@ class NukeButton(Button):
             Line(circle=(cx, cy, outer_r * 0.90), width=dp(1))
 
             # Dark button face and active inner ring.
-            Color(0.075, 0.08, 0.095, 1)
+            Color(*theme.DISPLAY_GLASS)
             Ellipse(pos=(cx - face_r, cy - face_r), size=(face_r * 2, face_r * 2))
             Color(icon[0], icon[1], icon[2], 0.95)
             Line(circle=(cx, cy, face_r), width=dp(2))
@@ -122,7 +120,7 @@ class NukeButton(Button):
                     cy + math.sin(angle + spread) * inner,
                 ))
 
-            Color(0.075, 0.08, 0.095, 1)
+            Color(*theme.DISPLAY_GLASS)
             Ellipse(pos=(cx - hub_r, cy - hub_r), size=(hub_r * 2, hub_r * 2))
             Color(*icon)
             Line(circle=(cx, cy, hub_r), width=dp(1.6))

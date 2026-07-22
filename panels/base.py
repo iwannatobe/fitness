@@ -5,7 +5,7 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.popup import Popup
-from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
+from kivy.graphics import Color, Rectangle, Line
 from kivy.metrics import dp
 
 from config import theme
@@ -20,6 +20,10 @@ class FormPanel(BoxLayout):
         self.main_layout = main_layout
         self._view_date = date.today()
         self._touch_start = None
+        with self.canvas.before:
+            Color(*theme.CHASSIS)
+            self._chassis = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self._sync_chassis, size=self._sync_chassis)
 
         self.form_scroll = ScrollView(do_scroll_x=False)
         self.form_area = BoxLayout(orientation="vertical", size_hint_y=None, spacing=dp(8))
@@ -30,13 +34,16 @@ class FormPanel(BoxLayout):
         date_bar = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(8))
         for arrow, delta in [("\u2039", -1), ("\u203a", 1)]:
             btn = Button(text=arrow, size_hint=(None, None), size=(dp(36), dp(32)),
-                         background_normal="", background_color=theme.SURFACE_HIGH,
+                         background_normal="", background_color=theme.METAL_DARK,
                          font_size=dp(18), color=theme.TEXT_SECONDARY, bold=True)
             with btn.canvas.before:
+                Color(*theme.METAL_LIGHT)
+                btn._edge_top = Line(points=[], width=dp(1))
                 Color(*theme.BORDER)
-                Line(rounded_rectangle=(0, 0, dp(36), dp(32), dp(8)), width=dp(1))
+                btn._edge = Line(rectangle=(0, 0, 0, 0), width=dp(1))
+            btn.bind(pos=self._sync_key, size=self._sync_key)
             btn.bind(on_release=lambda _, d=delta: self._shift_date(d))
-            sounds.bind_feedback(btn, bg_color=theme.SURFACE_HIGH)
+            sounds.bind_feedback(btn, bg_color=theme.METAL_DARK)
             date_bar.add_widget(btn)
         self._date_label = Label(text=self._view_date.isoformat(), font_size=dp(theme.FONT_H3),
                                  color=theme.TEXT_PRIMARY, size_hint_x=1, bold=True,
@@ -44,10 +51,16 @@ class FormPanel(BoxLayout):
         self._date_label.bind(size=self._date_label.setter("text_size"))
         date_bar.add_widget(self._date_label)
         today_btn = Button(text="今天", size_hint=(None, None), size=(dp(56), dp(32)),
-                           background_normal="", background_color=theme.GOLD,
-                           font_size=dp(theme.FONT_LABEL), color=(0.05, 0.05, 0.08, 1), bold=True)
+                           background_normal="", background_color=theme.VFD_ORANGE,
+                           font_size=dp(theme.FONT_LABEL), color=theme.CHASSIS, bold=True)
+        with today_btn.canvas.before:
+            Color(*theme.METAL_LIGHT)
+            today_btn._edge_top = Line(points=[], width=dp(1))
+            Color(*theme.METAL_DARK)
+            today_btn._edge = Line(rectangle=(0, 0, 0, 0), width=dp(1))
+        today_btn.bind(pos=self._sync_key, size=self._sync_key)
         today_btn.bind(on_release=lambda _: self._goto_today())
-        sounds.bind_feedback(today_btn, bg_color=theme.GOLD)
+        sounds.bind_feedback(today_btn, bg_color=theme.VFD_ORANGE)
         date_bar.add_widget(today_btn)
         self.add_widget(date_bar)
 
@@ -71,6 +84,16 @@ class FormPanel(BoxLayout):
         self._view_date = self._view_date + timedelta(days=delta)
         self._date_label.text = self._view_date.isoformat()
         self._refresh_list()
+
+    def _sync_chassis(self, *_):
+        self._chassis.pos = self.pos
+        self._chassis.size = self.size
+
+    @staticmethod
+    def _sync_key(btn, *_):
+        btn._edge.rectangle = (btn.x, btn.y, btn.width, btn.height)
+        btn._edge_top.points = [btn.x + dp(1), btn.top - dp(1),
+                                btn.right - dp(1), btn.top - dp(1)]
 
     def _goto_today(self):
         self._view_date = date.today()
@@ -98,13 +121,35 @@ class FormPanel(BoxLayout):
         inp = TextInput(text="", multiline=False, font_size=dp(theme.FONT_BODY),
                         input_filter=None if is_text else "float", write_tab=False,
                         background_normal="", background_active="",
-                        background_color=theme.SURFACE_HIGH,
+                        background_color=theme.DISPLAY_GLASS,
                         foreground_color=theme.TEXT_PRIMARY,
-                        cursor_color=theme.GOLD, padding=(dp(10), dp(10)))
+                        cursor_color=theme.VFD_CYAN, padding=(dp(10), dp(10)))
+        self._frame_input(inp)
+        return inp
+
+    @staticmethod
+    def _frame_input(inp):
         with inp.canvas.before:
             Color(*theme.BORDER)
-            Line(rounded_rectangle=(0, 0, dp(100), dp(40), dp(8)), width=dp(1))
-        return inp
+            inp._input_border = Line(rectangle=(0, 0, 0, 0), width=dp(1))
+            Color(*theme.GLASS_HIGHLIGHT)
+            inp._glass_line = Line(points=[], width=dp(1))
+        inp.bind(pos=FormPanel._sync_input, size=FormPanel._sync_input)
+
+    @staticmethod
+    def _frame_command(btn):
+        with btn.canvas.before:
+            Color(*theme.METAL_LIGHT)
+            btn._edge_top = Line(points=[], width=dp(1))
+            Color(*theme.METAL_DARK)
+            btn._edge = Line(rectangle=(0, 0, 0, 0), width=dp(1))
+        btn.bind(pos=FormPanel._sync_key, size=FormPanel._sync_key)
+
+    @staticmethod
+    def _sync_input(inp, *_):
+        inp._input_border.rectangle = (inp.x, inp.y, inp.width, inp.height)
+        inp._glass_line.points = [inp.x + dp(1), inp.top - dp(1),
+                                  inp.right - dp(1), inp.top - dp(1)]
 
     def _add_field(self, label, key, is_text=True):
         row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(10))
@@ -141,13 +186,16 @@ class FormPanel(BoxLayout):
     def _add_save_button(self, callback):
         self.form_area.add_widget(BoxLayout(size_hint_y=None, height=dp(4)))
         btn = Button(text="保存", size_hint_y=None, height=dp(44),
-                     background_normal="", background_color=theme.GOLD,
-                     color=(0.05, 0.05, 0.08, 1), font_size=dp(theme.FONT_H3), bold=True)
+                     background_normal="", background_color=theme.VFD_ORANGE,
+                     color=theme.CHASSIS, font_size=dp(theme.FONT_H3), bold=True)
         with btn.canvas.before:
-            Color(*theme.GOLD_DARK)
-            Line(rounded_rectangle=(0, 0, dp(200), dp(44), dp(10)), width=dp(1))
+            Color(*theme.METAL_LIGHT)
+            btn._edge_top = Line(points=[], width=dp(1))
+            Color(*theme.METAL_DARK)
+            btn._edge = Line(rectangle=(0, 0, 0, 0), width=dp(1))
+        btn.bind(pos=self._sync_key, size=self._sync_key)
         btn.bind(on_release=lambda _: callback())
-        sounds.bind_feedback(btn, bg_color=theme.GOLD)
+        sounds.bind_feedback(btn, bg_color=theme.VFD_ORANGE)
         self.form_area.add_widget(btn)
 
     def _clear_inputs(self, keys):
@@ -160,7 +208,7 @@ class FormPanel(BoxLayout):
     def _show_error(self, msg):
         popup = Popup(title="错误", title_color=theme.TEXT_PRIMARY,
                       content=Label(text=msg, color=theme.TEXT_PRIMARY),
-                      size_hint=(0.6, 0.25), background_color=theme.SURFACE)
+                      size_hint=(0.6, 0.25), background_color=theme.PANEL)
         popup.open()
 
     def _refresh_list(self):
@@ -176,11 +224,10 @@ class FormPanel(BoxLayout):
         row = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(8),
                         padding=[dp(12), 0])
         with row.canvas.before:
-            Color(*theme.SURFACE)
-            bg = RoundedRectangle(pos=row.pos, size=row.size, radius=[dp(theme.CARD_RADIUS)])
+            Color(*theme.PANEL)
+            bg = Rectangle(pos=row.pos, size=row.size)
             Color(*theme.BORDER)
-            border = Line(rounded_rectangle=(row.x, row.y, row.width, row.height, dp(theme.CARD_RADIUS)),
-                          width=dp(1))
+            border = Line(rectangle=(row.x, row.y, row.width, row.height), width=dp(1))
         row._bg_rect = bg
         row._border_line = border
         row.bind(pos=self._redraw_row, size=self._redraw_row)
@@ -201,4 +248,4 @@ class FormPanel(BoxLayout):
             row._bg_rect.pos = row.pos
             row._bg_rect.size = row.size
         if hasattr(row, "_border_line"):
-            row._border_line.rounded_rectangle = (row.x, row.y, row.width, row.height, dp(theme.CARD_RADIUS))
+            row._border_line.rectangle = (row.x, row.y, row.width, row.height)

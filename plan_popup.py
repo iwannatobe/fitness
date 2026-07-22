@@ -7,7 +7,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from kivy.clock import Clock
 from kivy.metrics import dp
-from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivy.graphics import Color, Rectangle, Line
 import theme
 import database as db
 from panels.strength import STRENGTH_PRESETS
@@ -39,14 +39,14 @@ class _WheelLabel(Label):
         if val > 0:
             return (0.92, 0.26, 0.26, 1)
         if val < 0:
-            return theme.ACCENT_CYAN
+            return theme.VFD_CYAN
         return theme.TEXT_MUTED
 
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
             touch.grab(self)
             self._last_y = touch.y
-            self.color = theme.GOLD
+            self.color = theme.VFD_ORANGE
             return True
         return False
 
@@ -97,7 +97,7 @@ class PlanPopup(FloatLayout):
     def _build_ui(self):
         self.clear_widgets()
         with self.canvas.before:
-            Color(0, 0, 0, 0.85)
+            Color(*theme.OVERLAY)
             self._bg = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=lambda _, p: setattr(self._bg, "pos", p),
                   size=lambda _, s: setattr(self._bg, "size", s))
@@ -105,15 +105,23 @@ class PlanPopup(FloatLayout):
         card = BoxLayout(orientation="vertical", padding=dp(16), spacing=dp(10),
                          size_hint=(0.92, 0.95), pos_hint={"center_x": 0.5, "center_y": 0.5})
         with card.canvas.before:
-            Color(*theme.SURFACE)
-            self._card_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(theme.CARD_RADIUS)])
+            Color(*theme.CHASSIS)
+            self._card_rect = Rectangle(pos=card.pos, size=card.size)
+            Color(*theme.METAL_LIGHT)
+            self._card_line = Line(rectangle=(*card.pos, *card.size), width=dp(1))
         card.bind(pos=lambda _, p: setattr(self._card_rect, "pos", p),
                   size=lambda _, s: setattr(self._card_rect, "size", s))
+        card.bind(
+            pos=lambda _, p: setattr(self._card_line, "rectangle",
+                                     (p[0], p[1], card.width, card.height)),
+            size=lambda _, s: setattr(self._card_line, "rectangle",
+                                      (card.x, card.y, s[0], s[1])),
+        )
         self.add_widget(card)
 
         hdr = BoxLayout(size_hint_y=None, height=dp(36))
-        hdr.add_widget(Label(text="[font=Symbols]☢[/font]  部署今日任务",
-                             markup=True, color=theme.GOLD, font_size=dp(18),
+        hdr.add_widget(Label(text="[b]PROGRAM LOAD / 01[/b]  部署今日任务",
+                              markup=True, color=theme.VFD_ORANGE, font_size=dp(14),
                              halign="left", valign="middle"))
         close_btn = Button(text="[font=Symbols]✕[/font]", size_hint_x=None, width=dp(36),
                            background_normal="", background_color=(0,0,0,0),
@@ -122,7 +130,7 @@ class PlanPopup(FloatLayout):
         hdr.add_widget(close_btn)
         card.add_widget(hdr)
 
-        card.add_widget(Label(text="选择训练模板", color=theme.TEXT_MUTED,
+        card.add_widget(Label(text="PROGRAM BANK / 选择训练模板", color=theme.METAL_LIGHT,
                               font_size=dp(11), size_hint_y=None, height=dp(18)))
 
         # Template grid — 固定六个预设模板，3列2行
@@ -140,14 +148,14 @@ class PlanPopup(FloatLayout):
             self._tmpl_name[name] = name
             self._tmpl_items[name] = items
             icon = TEMPLATE_ICONS.get(name, "")
-            clr = TEMPLATE_COLORS.get(name, theme.GOLD)
+            clr = TEMPLATE_COLORS.get(name, theme.VFD_ORANGE)
             if icon:
                 hex_clr = _rgba_hex(clr)
                 display = f"[color={hex_clr}][font=Symbols]{icon}[/font][/color] {name}"
             else:
                 display = name
             btn = Button(text=display, markup=bool(icon), size_hint=(1, None), height=dp(40),
-                         background_normal="", background_color=theme.SURFACE_LIGHT,
+                          background_normal="", background_color=theme.PANEL_RAISED,
                          color=theme.TEXT_PRIMARY, font_size=dp(13))
             btn.bind(on_release=lambda _, b=btn: self._tmpl_release(b))
             self._tmpl_press[btn] = {"name": name}
@@ -160,23 +168,23 @@ class PlanPopup(FloatLayout):
         ex_box = BoxLayout(orientation="vertical", size_hint_y=None, spacing=dp(4))
         ex_box.bind(minimum_height=ex_box.setter("height"))
 
-        ex_box.add_widget(Label(text="力量训练", color=theme.STRENGTH_ORANGE,
+        ex_box.add_widget(Label(text="STRENGTH INPUT / 力量训练", color=theme.VFD_ORANGE,
                                 font_size=dp(12), size_hint_y=None, height=dp(18)))
         presets = list(STRENGTH_PRESETS)
         for name in db.get_custom_exercises("strength"):
             if name not in presets: presets.append(name)
-        self._strength_grid = GridLayout(cols=4, size_hint_y=None, spacing=dp(3))
+        self._strength_grid = GridLayout(cols=3, size_hint_y=None, spacing=dp(3))
         self._strength_grid.bind(minimum_height=self._strength_grid.setter("height"))
         for name in presets:
             self._strength_grid.add_widget(self._make_exercise_btn(name, "strength"))
         ex_box.add_widget(self._strength_grid)
 
-        ex_box.add_widget(Label(text="有氧运动", color=theme.CARDIO_BLUE,
+        ex_box.add_widget(Label(text="CARDIO INPUT / 有氧运动", color=theme.VFD_CYAN,
                                 font_size=dp(12), size_hint_y=None, height=dp(18)))
         presets = list(CARDIO_PRESETS)
         for name in db.get_custom_exercises("cardio"):
             if name not in presets: presets.append(name)
-        self._cardio_grid = GridLayout(cols=4, size_hint_y=None, spacing=dp(3))
+        self._cardio_grid = GridLayout(cols=3, size_hint_y=None, spacing=dp(3))
         self._cardio_grid.bind(minimum_height=self._cardio_grid.setter("height"))
         for name in presets:
             self._cardio_grid.add_widget(self._make_exercise_btn(name, "cardio"))
@@ -186,7 +194,7 @@ class PlanPopup(FloatLayout):
         card.add_widget(scroll)
 
         # Selected items — 放大
-        card.add_widget(Label(text="已选动作", color=theme.GOLD,
+        card.add_widget(Label(text="SEQUENCE MONITOR / 已选动作", color=theme.VFD_ORANGE,
                               font_size=dp(13), size_hint_y=None, height=dp(20), bold=True))
         self._selected_box = BoxLayout(orientation="vertical", spacing=dp(4), size_hint_y=None)
         self._selected_box.bind(minimum_height=self._selected_box.setter("height"))
@@ -196,9 +204,9 @@ class PlanPopup(FloatLayout):
         card.add_widget(self._selected_scroll)
 
         # Confirm button
-        confirm_btn = Button(text="确认部署 [font=Symbols]☢[/font]",
+        confirm_btn = Button(text="EXECUTE / 确认部署",
                              size_hint_y=None, height=dp(46),
-                             background_normal="", background_color=theme.ACCENT,
+                              background_normal="", background_color=theme.VFD_ORANGE,
                              color=(0,0,0,1), font_size=dp(15), markup=True)
         confirm_btn.bind(on_release=lambda _: self._confirm())
         card.add_widget(confirm_btn)
@@ -208,8 +216,8 @@ class PlanPopup(FloatLayout):
         clr = EXERCISE_COLORS.get(name, theme.TEXT_MUTED)
         hex_clr = _rgba_hex(clr)
         display = "[color=" + hex_clr + "][font=Symbols]" + icon + "[/font][/color] " + name
-        btn = Button(text=display, markup=True, size_hint=(1, None), height=dp(36),
-                     background_normal="", background_color=theme.SURFACE_LIGHT,
+        btn = Button(text=display, markup=True, size_hint=(1, None), height=dp(40),
+                      background_normal="", background_color=theme.PANEL,
                      color=theme.TEXT_PRIMARY, font_size=dp(11))
         btn.bind(on_press=lambda _, n=name, t=ex_type: self._add_to_selected(t, n))
         return btn
@@ -241,15 +249,12 @@ class PlanPopup(FloatLayout):
         row = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(70),
                         spacing=dp(2), padding=[dp(6), dp(2)])
         with row.canvas.before:
-            Color(*theme.SURFACE_LIGHT)
-            RoundedRectangle(pos=row.pos, size=row.size, radius=[dp(8)])
-        row._bg_rect = None
+            Color(*theme.DISPLAY_GLASS)
+            row_bg = Rectangle(pos=row.pos, size=row.size)
 
         def redraw(*_):
-            for instr in row.canvas.before.children:
-                if isinstance(instr, RoundedRectangle):
-                    instr.pos = row.pos
-                    instr.size = row.size
+            row_bg.pos = row.pos
+            row_bg.size = row.size
         row.bind(pos=redraw, size=redraw)
 
         line1 = BoxLayout(size_hint_y=None, height=dp(28), spacing=dp(4))
@@ -275,7 +280,7 @@ class PlanPopup(FloatLayout):
                                    size_hint_x=0.04, font_size=dp(12)))
         del_btn = Button(text="×", size_hint_x=0.08,
                          background_normal="", background_color=(0, 0, 0, 0),
-                         color=theme.DANGER, font_size=dp(14), bold=True)
+                         color=theme.LED_RED, font_size=dp(14), bold=True)
         del_btn.bind(on_press=lambda _, i=idx: self._remove_item(i))
         line1.add_widget(del_btn)
         row.add_widget(line1)
@@ -292,7 +297,7 @@ class PlanPopup(FloatLayout):
             line2.add_widget(Label(text="次/组", color=theme.TEXT_MUTED,
                                    size_hint_x=0.08, font_size=dp(11)))
             self._preview_labels[idx] = None
-            preview = Label(text="", color=theme.ACCENT_CYAN, font_size=dp(10),
+            preview = Label(text="", color=theme.VFD_CYAN, font_size=dp(10),
                             size_hint_x=0.40, halign="left", valign="middle")
             preview.bind(size=preview.setter("text_size"))
             self._preview_labels[idx] = preview
@@ -310,7 +315,7 @@ class PlanPopup(FloatLayout):
         if signed:
             init_text = (f"+{init_val}" if init_val > 0 else str(init_val))
             init_color = ((0.92, 0.26, 0.26, 1) if init_val > 0
-                          else theme.ACCENT_CYAN if init_val < 0
+                          else theme.VFD_CYAN if init_val < 0
                           else theme.TEXT_MUTED)
         else:
             init_text = str(init_val)

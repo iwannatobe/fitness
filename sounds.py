@@ -41,14 +41,15 @@ def _write_wav(path, samples, rate=22050):
 
 def _gen_click(path):
     rate = 22050
-    dur = 0.06
+    dur = 0.045
     n = int(rate * dur)
-    freq = 1800.0
     samples = []
     for i in range(n):
         t = i / rate
-        env = math.exp(-t * 60)
-        samples.append(0.6 * env * math.sin(2 * math.pi * freq * t))
+        env = math.exp(-t * 85)
+        metal = math.sin(2 * math.pi * 1450 * t)
+        contact = 0.45 * math.sin(2 * math.pi * 410 * t)
+        samples.append(0.48 * env * (metal + contact))
     _write_wav(path, samples, rate)
 
 

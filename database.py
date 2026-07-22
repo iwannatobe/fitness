@@ -10,7 +10,9 @@ from models.catalog_model import (
 from models.template_model import add_template, get_templates, delete_template, update_template
 from models.metrics_model import get_user_weight, set_user_weight, calc_strength_calories, calc_cardio_calories
 from models.nuke_model import add_nuke_marker, is_date_nuked, get_nuke_dates
-from models.calendar_model import get_active_dates, get_date_detail, get_date_template_name
+from models.calendar_model import (
+    get_active_dates, get_date_detail, get_date_overview, get_date_template_name,
+)
 from models.exercise_model import get_custom_exercises, add_custom_exercise, delete_custom_exercise
 from models.profile_model import get_profile, set_profile
 from models.meal_model import add_meal, get_today_meals, get_meals_for_date, delete_meal

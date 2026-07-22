@@ -1,5 +1,9 @@
+from datetime import datetime, timedelta
+import os
+
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
+from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 from kivy.clock import Clock
@@ -7,6 +11,7 @@ from kivy.graphics import Color, Rectangle, Line
 from kivy.metrics import dp
 from config import theme
 from utils.instrument import StatusLamp
+import database as db
 import sounds
 
 
@@ -119,10 +124,10 @@ class SystemBus(BoxLayout):
                           halign="left", valign="middle")
         bus_label.bind(size=bus_label.setter("text_size"))
         top.add_widget(bus_label)
-        mode_label = Label(text="V1.8", color=theme.VFD_BLUE, font_size=dp(8),
-                           size_hint_x=None, width=dp(28), halign="right", valign="middle")
-        mode_label.bind(size=mode_label.setter("text_size"))
-        top.add_widget(mode_label)
+        self._time = Label(text="--:--:--", color=theme.VFD_ORANGE, font_size=dp(9),
+                           size_hint_x=None, width=dp(52), halign="right", valign="middle")
+        self._time.bind(size=self._time.setter("text_size"))
+        top.add_widget(self._time)
         self.add_widget(top)
 
         rails = BoxLayout(size_hint_y=None, height=dp(11), spacing=dp(3))
@@ -148,6 +153,29 @@ class SystemBus(BoxLayout):
         scan_row.add_widget(scan_label)
         scan_row.add_widget(BusMeter())
         self.add_widget(scan_row)
+        self._timer = Clock.schedule_interval(self._refresh_time, 1.0)
+        self._refresh_time()
+
+    def _refresh_time(self, *_):
+        session = db.get_today_training_session()
+        if not session:
+            self._time.text = "--:--:--"
+            self._time.color = theme.TEXT_MUTED
+            return True
+        if session.get("duration_seconds") is not None:
+            elapsed = int(session["duration_seconds"])
+            self._time.color = theme.LED_GREEN
+        else:
+            try:
+                started = datetime.fromisoformat(session["started_at"])
+                elapsed = max(0, int((datetime.now() - started).total_seconds()))
+            except (TypeError, ValueError):
+                elapsed = 0
+            self._time.color = theme.VFD_ORANGE
+        hours, remainder = divmod(elapsed, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        self._time.text = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        return True
 
     def _draw_frame(self, *_):
         self._bg.pos = self.pos
@@ -159,11 +187,113 @@ class SystemBus(BoxLayout):
     def on_parent(self, _widget, parent):
         if parent is not None:
             return
+        if self._timer is not None:
+            self._timer.cancel()
+            self._timer = None
         for widget in self.walk():
             if isinstance(widget, BusMeter):
                 widget.stop()
             elif isinstance(widget, StatusLamp):
                 widget.stop()
+
+
+class ChannelDisplay(BoxLayout):
+    """Framed active-page display balancing the SystemBus module."""
+
+    def __init__(self, title_text, **kwargs):
+        super().__init__(orientation="vertical", padding=[dp(5), dp(3)],
+                         spacing=dp(2), size_hint_x=None, width=dp(158), **kwargs)
+        with self.canvas.before:
+            Color(*theme.DISPLAY_GLASS)
+            self._bg = Rectangle(pos=self.pos, size=self.size)
+            Color(*theme.METAL)
+            self._border = Line(rectangle=(*self.pos, *self.size), width=dp(0.8))
+            Color(*theme.VFD_ORANGE_DIM)
+            self._channel = Rectangle(pos=self.pos, size=(dp(2), self.height))
+            Color(*theme.GLASS_HIGHLIGHT)
+            self._highlight = Rectangle(pos=self.pos, size=(self.width, dp(1)))
+        self.bind(pos=self._draw_frame, size=self._draw_frame)
+
+        english, _, chinese = title_text.partition("\n")
+        top = BoxLayout(size_hint_y=None, height=dp(10), spacing=dp(4))
+        channel_label = Label(text="ACTIVE CHANNEL", color=theme.VFD_ORANGE,
+                              font_size=dp(8), halign="left", valign="middle")
+        channel_label.bind(size=channel_label.setter("text_size"))
+        top.add_widget(channel_label)
+        self._date_label = Label(text="", color=theme.VFD_BLUE, font_size=dp(8),
+                                 size_hint_x=None, width=dp(58), halign="right", valign="middle")
+        self._date_label.bind(size=self._date_label.setter("text_size"))
+        top.add_widget(self._date_label)
+        self.add_widget(top)
+
+        page = Label(text=f"[b]{english} / {chinese or english}[/b]", markup=True,
+                     color=theme.TEXT_PRIMARY, font_size=dp(9),
+                     size_hint_y=None, height=dp(11), halign="left", valign="middle")
+        page.bind(size=page.setter("text_size"))
+        self.add_widget(page)
+        self._schedule = MiniSchedule(size_hint_y=None, height=dp(11))
+        self.add_widget(self._schedule)
+        self._date_timer = Clock.schedule_interval(self._refresh_date, 60)
+        self._refresh_date()
+
+    def _refresh_date(self, *_):
+        self._date_label.text = datetime.now().strftime("%Y.%m.%d")
+        self._schedule.refresh()
+        return True
+
+    def _draw_frame(self, *_):
+        self._bg.pos = self.pos
+        self._bg.size = self.size
+        self._border.rectangle = (*self.pos, *self.size)
+        self._channel.pos = (self.x + dp(2), self.y + dp(3))
+        self._channel.size = (dp(2), max(0, self.height - dp(6)))
+        self._highlight.pos = (self.x + dp(2), self.top - dp(2))
+        self._highlight.size = (max(0, self.width - dp(4)), dp(1))
+
+    def on_parent(self, _widget, parent):
+        if parent is None and self._date_timer is not None:
+            self._date_timer.cancel()
+            self._date_timer = None
+
+
+class MiniSchedule(Widget):
+    """Seven-slot rectangular week schedule: history cyan, today orange."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._active_dates = {}
+        with self.canvas:
+            self._slots = []
+            for _ in range(7):
+                color = Color(*theme.METAL_DARK)
+                rect = Rectangle(pos=self.pos, size=(0, 0))
+                self._slots.append((color, rect))
+        self.bind(pos=self._draw, size=self._draw)
+        self.refresh()
+
+    def refresh(self):
+        self._active_dates = db.get_active_dates()
+        self._draw()
+
+    def _draw(self, *_):
+        today = datetime.now().date()
+        week_start = today - timedelta(days=today.weekday())
+        gap = dp(3)
+        slot_w = max(dp(3), (self.width - gap * 6) / 7)
+        x = self.x
+        for index, (color, rect) in enumerate(self._slots):
+            day = week_start + timedelta(days=index)
+            if day == today:
+                color.rgba = theme.VFD_ORANGE
+            elif day.isoformat() in self._active_dates:
+                color.rgba = theme.VFD_CYAN
+            elif day > today:
+                color.rgba = theme.DISPLAY_OFF
+            else:
+                color.rgba = theme.METAL_DARK
+            rect.pos = (x, self.y + dp(2))
+            rect.size = (slot_w, max(dp(2), self.height - dp(4)))
+            x += slot_w + gap
 
 
 class TopBar(BoxLayout):
@@ -181,16 +311,22 @@ class TopBar(BoxLayout):
             burger = HamburgerButton()
             burger.bind(on_release=lambda _: on_menu())
             self.add_widget(burger)
-        else:
-            self.add_widget(BoxLayout(size_hint=(None, None), size=(dp(44), dp(44))))
-        english, _, chinese = title_text.partition("\n")
-        title = Label(text=(f"[color=66ccff][size=11sp]{english}[/size][/color]\n"
-                            f"[b]{chinese or english}[/b]"), markup=True,
-                      font_size=dp(theme.FONT_BODY), color=theme.TEXT_PRIMARY,
-                      halign="left", valign="middle")
-        title.bind(size=title.setter("text_size"))
-        self.add_widget(title)
-        self.add_widget(SystemBus())
+        self._channel_display = ChannelDisplay(title_text)
+        self.add_widget(self._channel_display)
+        logo_holder = BoxLayout(size_hint_x=1, padding=[dp(2), dp(3)])
+        logo_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "icon.png")
+        logo_holder.add_widget(Image(source=logo_path, allow_stretch=True, keep_ratio=True))
+        self.add_widget(logo_holder)
+        self._system_bus = SystemBus()
+        self.add_widget(self._system_bus)
+        self.bind(width=self._resize_modules)
+        self._resize_modules()
+
+    def _resize_modules(self, *_):
+        available = max(0, self.width - dp(16))
+        module_width = min(dp(158), max(dp(132), (available - dp(24)) / 2))
+        self._channel_display.width = module_width
+        self._system_bus.width = module_width
 
     def _update_rect(self, *args):
         self._rect.size = self.size

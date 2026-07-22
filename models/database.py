@@ -81,6 +81,12 @@ def init_db():
             calories REAL NOT NULL, items_json TEXT DEFAULT '',
             source TEXT DEFAULT 'ai', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS training_sessions (
+            session_date DATE PRIMARY KEY,
+            started_at TEXT NOT NULL,
+            completed_at TEXT,
+            duration_seconds INTEGER
+        );
     """)
     # 确保 user_profile 有默认行
     conn.execute("INSERT OR IGNORE INTO user_profile (id) VALUES (1)")

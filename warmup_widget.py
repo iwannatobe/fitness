@@ -5,6 +5,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 from kivy.graphics import Color, Rectangle, Line
 from config import theme
+from config.constants import ENCOURAGEMENTS
 import database as db
 from exercise_catalog_ui import ExerciseDetailPopup
 from utils.instrument import MechanicalButton
@@ -77,9 +78,18 @@ class WarmupWidget(BoxLayout):
         current = next((p for p in plan if not p["completed"]), None)
         if current is None:
             self._title.text = "[color=00ffcc][size=10sp]MISSION COMPLETE[/size][/color]\n[b]全部完成[/b]"
-            self._body_inner.add_widget(Label(text="[b]\u2713  训练完成[/b]", markup=True,
-                                         color=theme.ACCENT_CYAN, font_size=dp(theme.FONT_H2),
-                                         halign="center", valign="middle", bold=True))
+            from datetime import date
+            message = ENCOURAGEMENTS[date.today().toordinal() % len(ENCOURAGEMENTS)]
+            notice = Label(
+                text=f"[color=ff5d5d][b]RECOVERY NOTICE[/b][/color]\n{message}",
+                markup=True, color=theme.TEXT_PRIMARY, font_size=dp(12),
+                size_hint_y=None, halign="left", valign="top",
+            )
+            notice.bind(width=lambda widget, width:
+                        setattr(widget, "text_size", (max(0, width), None)))
+            notice.bind(texture_size=lambda widget, size:
+                        setattr(widget, "height", max(dp(56), size[1] + dp(10))))
+            self._body_inner.add_widget(notice)
             return
         self._title.text = "[color=ff5500][size=10sp]CURRENT TARGET[/size][/color]\n[b]当前目标[/b]"
         self._current_pid = current["id"]

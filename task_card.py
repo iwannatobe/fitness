@@ -2,6 +2,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.metrics import dp
 from kivy.graphics import Color, Rectangle, Line
+from kivy.utils import escape_markup
 from config import theme
 import database as db
 
@@ -9,7 +10,7 @@ import database as db
 class TaskCard(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(orientation="vertical",
-                         size_hint_y=None, height=dp(88),
+                         size_hint_y=None, height=dp(102),
                          padding=[dp(theme.CARD_PADDING), dp(12)],
                          spacing=dp(6), **kwargs)
         with self.canvas.before:
@@ -43,9 +44,10 @@ class TaskCard(BoxLayout):
         self.add_widget(self._track)
 
         self._sub = Label(text="点击核爆按钮生成计划", color=theme.TEXT_MUTED,
-                          font_size=dp(theme.FONT_CAPTION), halign="left", valign="middle",
-                          markup=True, size_hint_y=None, height=dp(14))
-        self._sub.bind(size=self._sub.setter("text_size"))
+                           font_size=dp(theme.FONT_CAPTION), halign="left", valign="middle",
+                           markup=True, size_hint_y=None, height=dp(28))
+        self._sub.bind(size=lambda widget, size:
+                       setattr(widget, "text_size", (size[0], None)))
         self.add_widget(self._sub)
         self.refresh()
 
@@ -89,10 +91,14 @@ class TaskCard(BoxLayout):
         gold_hex = "00ffcc"
         muted_hex = "666f70"
         parts = []
-        for p in plan[:6]:
+        visible = plan[:4]
+        for p in visible:
+            name = escape_markup(str(p["exercise_name"]))
             if p["completed"]:
-                parts.append(f"[color={gold_hex}]{p['exercise_name']}[/color]")
+                parts.append(f"[color={gold_hex}]{name}[/color]")
             else:
-                parts.append(f"[color={muted_hex}]{p['exercise_name']}[/color]")
-        self._sub.text = "  ".join(parts) + (" …" if len(plan) > 6 else "")
+                parts.append(f"[color={muted_hex}]{name}[/color]")
+        remaining = len(plan) - len(visible)
+        suffix = f"  [color=33ccff]+{remaining} 项[/color]" if remaining else ""
+        self._sub.text = "  ".join(parts) + suffix
         self._redraw_track()

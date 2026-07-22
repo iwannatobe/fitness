@@ -12,7 +12,7 @@ version = 1.8
 
 icon.filename = assets/icons/icon.png
 presplash.filename = assets/icons/icon.png
-presplash.color = #050506
+presplash.color = #07090B
 
 # Kivy 2.1.0 + p4a v2023.09.16 — proven stable combo for Android
 requirements = python3,kivy==2.1.0,httpx,httpcore,h11,anyio,sniffio,certifi,typing_extensions,idna

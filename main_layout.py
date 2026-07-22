@@ -205,19 +205,22 @@ class MainLayout(FloatLayout):
 
     def _on_plan_confirmed(self, btn, template_id=None):
         self._nuke_template_id = template_id
+        db.start_today_training_session()
         self.refresh_heatmap(); self._task_card.refresh()
         if hasattr(self, "_warmup"): self._warmup.show_warmups_for(db.get_today_plan())
         shake_widget(self.sm); flash_screen(self)
         win_x, win_y = btn.to_window(*btn.center)
         local_x, local_y = self.to_widget(win_x, win_y)
         explode_particles(self, local_x, local_y)
-        Clock.schedule_once(lambda dt: show_battle_report(self), 0.9)
 
     def _on_task_completed(self):
         self.refresh_heatmap()
         if hasattr(self, "_task_card"): self._task_card.refresh()
         if hasattr(self, "_strength_panel"): self._strength_panel._refresh_list()
         if hasattr(self, "_cardio_panel"): self._cardio_panel._refresh_list()
+        plan = db.get_today_plan()
+        if plan and all(item["completed"] for item in plan):
+            Clock.schedule_once(lambda _dt: show_battle_report(self), 0.35)
         # 全部完成 → 把当前训练量同步回模板
         self._sync_to_template_if_all_done()
 

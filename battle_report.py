@@ -27,7 +27,8 @@ def show_battle_report(layout):
     if len(s_rows): lines.append(f"STRENGTH  {len(s_rows):02d} / 力量项目")
     if len(c_rows): lines.append(f"CARDIO    {len(c_rows):02d} / 有氧项目")
     lines.append(f"OUTPUT    {total_cal:.0f} KCAL / 训练消耗")
-    lines.append(""); lines.append(msg)
+    lines.append(""); lines.append("[color=#ff5d5d][b]RECOVERY NOTICE[/b][/color]")
+    lines.append(msg)
     content = BoxLayout(orientation="vertical", spacing=dp(8), padding=dp(16))
     with content.canvas.before:
         Color(*theme.CHASSIS)
@@ -40,7 +41,10 @@ def show_battle_report(layout):
         size=lambda _, s: (setattr(report_bg, "size", s),
                            setattr(report_border, "rectangle", (content.x, content.y, s[0], s[1]))),
     )
-    content.add_widget(Label(text="\n".join(lines), markup=True, color=theme.TEXT_PRIMARY, font_size=dp(13), halign="center", valign="middle"))
+    report = Label(text="\n".join(lines), markup=True, color=theme.TEXT_PRIMARY,
+                   font_size=dp(13), halign="center", valign="middle")
+    report.bind(size=report.setter("text_size"))
+    content.add_widget(report)
     close_btn = Button(text="ACKNOWLEDGE / 继续", size_hint_y=None, height=dp(42),
                        background_normal="", background_color=theme.VFD_ORANGE,
                        color=(0.05,0.05,0.08,1), font_size=dp(13), bold=True)

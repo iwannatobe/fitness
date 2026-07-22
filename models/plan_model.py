@@ -26,6 +26,8 @@ def complete_plan_item(plan_id):
     conn = get_db()
     conn.execute("UPDATE daily_plan SET completed = 1 WHERE id = ?", (plan_id,))
     conn.commit(); conn.close()
+    from models.training_session_model import finish_today_training_session_if_complete
+    finish_today_training_session_if_complete()
 
 def delete_plan_item(plan_id):
     conn = get_db()

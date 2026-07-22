@@ -1,7 +1,7 @@
 from kivy.uix.button import Button
 from kivy.animation import Animation
 from kivy.clock import Clock
-from kivy.graphics import Color, Ellipse, Line, Rectangle, RoundedRectangle
+from kivy.graphics import Color, Ellipse, Line, RoundedRectangle, Triangle
 from kivy.properties import BooleanProperty, NumericProperty
 from kivy.metrics import dp
 import math
@@ -14,6 +14,8 @@ _BG_NORMAL = (0.10, 0.11, 0.14, 1)
 _BG_NUKED = (0.18, 0.08, 0.06, 1)
 _ICON_NORMAL = theme.GOLD
 _ICON_NUKED = theme.GOLD_DARK
+_METAL = (0.20, 0.21, 0.25, 1)
+_METAL_DARK = (0.055, 0.06, 0.075, 1)
 
 class NukeButton(Button):
     nuked_today = BooleanProperty(False)
@@ -63,34 +65,75 @@ class NukeButton(Button):
         w, h = self.width, self.height
         cx, cy = self.center_x, self.center_y
         bg, icon = self._bg, self._icon
-        s = min(w, h) * 0.40
-        radius = [min(w, h) * 0.14]
+        unit = min(w, h)
+        outer_r = unit * 0.38
+        face_r = outer_r * 0.78
+        hub_r = face_r * 0.26
+        radius = [dp(theme.CARD_RADIUS)]
 
         with self.canvas.before:
             Color(*bg)
             RoundedRectangle(pos=(x, y), size=(w, h), radius=radius)
-            Color(icon[0], icon[1], icon[2], self._glow)
-            glow_r = s * 1.55
+            # Soft status glow stays inside the rectangular control panel.
+            Color(icon[0], icon[1], icon[2], self._glow * 0.45)
+            glow_r = outer_r * 1.18
             Ellipse(pos=(cx - glow_r, cy - glow_r), size=(glow_r * 2, glow_r * 2))
 
+            # Recessed metal bezel.
+            Color(*_METAL_DARK)
+            Ellipse(pos=(cx - outer_r, cy - outer_r), size=(outer_r * 2, outer_r * 2))
+            Color(*_METAL)
+            Line(circle=(cx, cy, outer_r), width=dp(2.2))
+            Color(*theme.BORDER_DIM)
+            Line(circle=(cx, cy, outer_r * 0.90), width=dp(1))
+
+            # Dark button face and active inner ring.
+            Color(0.075, 0.08, 0.095, 1)
+            Ellipse(pos=(cx - face_r, cy - face_r), size=(face_r * 2, face_r * 2))
+            Color(icon[0], icon[1], icon[2], 0.95)
+            Line(circle=(cx, cy, face_r), width=dp(2))
+
         with self.canvas.after:
+            # Twenty-four engraved calibration ticks.
+            for index in range(24):
+                angle = math.radians(index * 15 - 90)
+                inner = outer_r * (0.80 if index % 3 == 0 else 0.84)
+                end = outer_r * 0.91
+                alpha = 0.92 if index % 3 == 0 else 0.38
+                Color(icon[0], icon[1], icon[2], alpha)
+                Line(points=(
+                    cx + math.cos(angle) * inner, cy + math.sin(angle) * inner,
+                    cx + math.cos(angle) * end, cy + math.sin(angle) * end,
+                ), width=dp(1.25 if index % 3 == 0 else 0.7))
+
+            # Three radiation blades point around the central hub.
+            for index in range(3):
+                angle = math.radians(index * 120 - 90)
+                spread = math.radians(28)
+                inner = hub_r * 1.32
+                outer = face_r * 0.72
+                Color(*icon)
+                Triangle(points=(
+                    cx + math.cos(angle - spread) * inner,
+                    cy + math.sin(angle - spread) * inner,
+                    cx + math.cos(angle) * outer,
+                    cy + math.sin(angle) * outer,
+                    cx + math.cos(angle + spread) * inner,
+                    cy + math.sin(angle + spread) * inner,
+                ))
+
+            Color(0.075, 0.08, 0.095, 1)
+            Ellipse(pos=(cx - hub_r, cy - hub_r), size=(hub_r * 2, hub_r * 2))
             Color(*icon)
-            Line(circle=(cx, cy, s), width=2.5)
+            Line(circle=(cx, cy, hub_r), width=dp(1.6))
+            Ellipse(pos=(cx - hub_r * 0.22, cy - hub_r * 0.22),
+                    size=(hub_r * 0.44, hub_r * 0.44))
 
-            for i in range(6):
-                start = i * 60 - 90
-                a = math.radians(start)
-                tip_r = s * 0.15
-                tip_dist = s - tip_r * 0.6
-                tx = cx + math.cos(a) * tip_dist
-                ty = cy + math.sin(a) * tip_dist
-                Ellipse(pos=(tx - tip_r, ty - tip_r), size=(tip_r * 2, tip_r * 2))
-
-            Color(*bg)
-            hub = s * 0.32
-            Ellipse(pos=(cx - hub, cy - hub), size=(hub * 2, hub * 2))
-
-            Color(*icon)
-            Line(circle=(cx, cy, hub), width=1.5)
-            dot = s * 0.07
-            Ellipse(pos=(cx - dot, cy - dot), size=(dot * 2, dot * 2))
+            # Four panel fasteners reinforce the physical-control look.
+            Color(*theme.BORDER)
+            fastener = dp(2.2)
+            inset = dp(8)
+            for fx, fy in ((x + inset, y + inset), (x + w - inset, y + inset),
+                           (x + inset, y + h - inset), (x + w - inset, y + h - inset)):
+                Ellipse(pos=(fx - fastener, fy - fastener),
+                        size=(fastener * 2, fastener * 2))

@@ -23,7 +23,7 @@ class RoundedButton(Button):
                          font_size=font_size, bold=bold, markup=markup,
                          background_normal="", background_color=(0,0,0,0),
                          color=color, **kwargs)
-        self._radius = radius if radius is not None else min(size) * 0.15
+        self._radius = radius if radius is not None else dp(theme.CONTROL_RADIUS)
         self._orig_color = bg_color
         self._bg_color = bg_color
         self.bind(pos=self._draw, size=self._draw)
@@ -87,7 +87,7 @@ class CalendarHeatmap(BoxLayout):
     def _make_grid(self, year, month, w, cell_size, spacing, cols, font_size):
         cal_obj = cal.Calendar(firstweekday=0)
         month_days = cal_obj.monthdayscalendar(year, month)
-        total_rows = 7 + len(month_days)
+        total_rows = 1 + len(month_days)
         grid_w = cell_size * cols + spacing * (cols - 1)
         grid_h = cell_size * total_rows + spacing * (total_rows - 1)
         grid = GridLayout(cols=cols, spacing=spacing, size_hint=(None,None), size=(grid_w, grid_h))
@@ -159,18 +159,23 @@ class CalendarHeatmap(BoxLayout):
         grid_area_h = h - bottom_h - pad_v - gap
         cal_obj = cal.Calendar(firstweekday=0)
         month_days = cal_obj.monthdayscalendar(year, month)
-        total_rows = 7 + len(month_days)
+        total_rows = 1 + len(month_days)
         cell_w = (w - pad_h * 2 - spacing * (cols - 1)) // cols
         cell_h = (grid_area_h - spacing * (total_rows - 1)) // total_rows if total_rows > 0 else 0
         cell_size = max(1, min(cell_w, cell_h))
         font_size = max(1, int(cell_size * 0.38))
         self._grid_area = FloatLayout(size_hint_y=None, height=grid_area_h)
         grid = self._make_grid(year, month, w, cell_size, spacing, cols, font_size)
-        grid.x = (w - grid.width) / 2
-        grid.y = (grid_area_h - grid.height) / 2
+
+        def position_grid(*_):
+            grid.center_x = self._grid_area.center_x
+            grid.center_y = self._grid_area.center_y
+
+        self._grid_area.bind(pos=position_grid, size=position_grid)
         self._grid_area.add_widget(grid)
         self._grid = grid
         self.add_widget(self._grid_area)
+        Clock.schedule_once(position_grid, 0)
         bar = BoxLayout(size_hint_y=None, height=bottom_h,
                         spacing=self._scale(4, scale),
                         padding=[self._scale(8, scale), 0, self._scale(8, scale), 0])
@@ -247,16 +252,16 @@ class CalendarHeatmap(BoxLayout):
         month = self._current_date.month
         cal_obj = cal.Calendar(firstweekday=0)
         month_days = cal_obj.monthdayscalendar(year, month)
-        total_rows = 7 + len(month_days)
+        total_rows = 1 + len(month_days)
         cell_w = (w - pad_h * 2 - spacing * (cols - 1)) // cols
         cell_h = (grid_area_h - spacing * (total_rows - 1)) // total_rows if total_rows > 0 else 0
         cell_size = max(1, min(cell_w, cell_h))
         font_size = max(1, int(cell_size * 0.38))
         old_grid = self._grid
         new_grid = self._make_grid(year, month, w, cell_size, spacing, cols, font_size)
-        center_x = (w - new_grid.width) / 2
-        center_y = (grid_area_h - new_grid.height) / 2
-        offset = w if direction == -1 else -w
+        center_x = self._grid_area.x + (self._grid_area.width - new_grid.width) / 2
+        center_y = self._grid_area.y + (self._grid_area.height - new_grid.height) / 2
+        offset = self._grid_area.width if direction == -1 else -self._grid_area.width
         new_grid.x = center_x + offset
         new_grid.y = center_y
         self._grid_area.add_widget(new_grid)

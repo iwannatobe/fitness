@@ -5,9 +5,10 @@ package.name = fitnessapp
 package.domain = org.fitness
 
 source.dir = .
-source.include_exts = py,ttf,wav,atlas,png,gif
+source.include_exts = py,ttf,wav,atlas,png,jpg,gif,db
+source.exclude_patterns = check_pkg.py,ui参考文件/*,tools/*,test_images/*,assets/catalog/gifs/*
 
-version = 1.6
+version = 1.7
 
 icon.filename = assets/icons/icon.png
 presplash.filename = assets/icons/icon.png

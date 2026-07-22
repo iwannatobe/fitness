@@ -6,20 +6,22 @@ from kivy.core.text import Label as CoreLabel
 from kivy.metrics import dp
 from kivy.clock import Clock
 from config import theme
+from utils.platform import get_app_version
 import sounds
 
 _MENU = [
-    ("日历", "home", "\u25cf"),
-    ("力量训练", "strength", "\u25b2"),
-    ("有氧运动", "cardio", "\u266b"),
-    ("身体数据", "body", "\u2605"),
-    ("AI 助手", "ai", "\u2726"),
+    ("CALENDAR\n日历", "home", "\u25cf"),
+    ("STRENGTH\n力量训练", "strength", "\u25b2"),
+    ("CARDIO\n有氧运动", "cardio", "\u266b"),
+    ("BODY DATA\n身体数据", "body", "\u2605"),
+    ("STATISTICS\n统计数据", "stats", "\u25c6"),
+    ("AI ASSISTANT\nAI 助手", "ai", "\u2726"),
 ]
 
 
 class _MenuButton(Button):
     def __init__(self, label, icon, screen_name, on_select, **kwargs):
-        super().__init__(text="", size_hint_y=None, height=dp(52),
+        super().__init__(text="", size_hint_y=None, height=dp(58),
                          background_normal="", background_color=(0, 0, 0, 0),
                          **kwargs)
         self._label_text = label
@@ -44,7 +46,7 @@ class _MenuButton(Button):
                 Color(0.16, 0.165, 0.21, 1)
                 RoundedRectangle(pos=(self.x + dp(8), self.y + dp(6)),
                                  size=(self.width - dp(16), self.height - dp(12)),
-                                 radius=[dp(10)])
+                                  radius=[dp(theme.CONTROL_RADIUS)])
             pad = dp(20)
             icon_clr = theme.GOLD if self._selected else theme.TEXT_MUTED
             lbl_clr = theme.TEXT_PRIMARY if self._selected else theme.TEXT_SECONDARY
@@ -56,7 +58,7 @@ class _MenuButton(Button):
                 Rectangle(texture=cl.texture,
                           pos=(self.x + pad, self.y + (self.height - cl.texture.size[1]) / 2),
                           size=cl.texture.size)
-            cl2 = CoreLabel(text=self._label_text, font_size=dp(theme.FONT_H3),
+            cl2 = CoreLabel(text=self._label_text, font_size=dp(theme.FONT_LABEL),
                             color=lbl_clr, font_name="Roboto")
             cl2.refresh()
             if cl2.texture:
@@ -87,7 +89,7 @@ class Sidebar(BoxLayout):
         header.add_widget(title)
         self.add_widget(header)
 
-        sub = Label(text="Tracker  v1.3", color=theme.TEXT_MUTED,
+        sub = Label(text=f"CONTROL TERMINAL  v{get_app_version()}", color=theme.TEXT_MUTED,
                     font_size=dp(theme.FONT_CAPTION), halign="left", valign="middle",
                     size_hint_y=None, height=dp(18), padding=[dp(20), 0])
         sub.bind(size=sub.setter("text_size"))

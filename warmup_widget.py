@@ -6,6 +6,7 @@ from kivy.metrics import dp
 from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
 from config import theme
 import database as db
+from exercise_catalog_ui import ExerciseDetailPopup
 
 
 def _hex(c):
@@ -87,9 +88,9 @@ class WarmupWidget(BoxLayout):
                          size_hint=(1, None))
         with card.canvas.before:
             Color(*theme.SURFACE_HIGH)
-            RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(10)])
+            RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(theme.CARD_RADIUS)])
             Color(*theme.BORDER)
-            Line(rounded_rectangle=(card.x, card.y, card.width, card.height, dp(10)), width=dp(1))
+            Line(rounded_rectangle=(card.x, card.y, card.width, card.height, dp(theme.CARD_RADIUS)), width=dp(1))
         card._bg_rect = None
         card._border_line = None
 
@@ -99,7 +100,7 @@ class WarmupWidget(BoxLayout):
                     instr.pos = card.pos
                     instr.size = card.size
                 elif isinstance(instr, Line):
-                    instr.rounded_rectangle = (card.x, card.y, card.width, card.height, dp(10))
+                    instr.rounded_rectangle = (card.x, card.y, card.width, card.height, dp(theme.CARD_RADIUS))
         card.bind(pos=redraw, size=redraw)
         card.bind(minimum_height=card.setter("height"))
 
@@ -111,12 +112,22 @@ class WarmupWidget(BoxLayout):
             tag = "有氧"
             tag_clr = theme.CARDIO_BLUE
 
-        tag_row = BoxLayout(size_hint_y=None, height=dp(14))
+        tag_row = BoxLayout(size_hint_y=None, height=dp(30), spacing=dp(6))
         tag_lbl = Label(text=f"[color={_hex(tag_clr)}][b]{tag}[/b][/color]",
                         markup=True, font_size=dp(theme.FONT_CAPTION),
                         halign="left", valign="middle", size_hint_x=1)
         tag_lbl.bind(size=tag_lbl.setter("text_size"))
         tag_row.add_widget(tag_lbl)
+        catalog_exercise = db.find_catalog_exercise(
+            p.get("exercise_id"), p.get("exercise_name"))
+        if catalog_exercise:
+            info_btn = Button(text="[b]动作要领[/b]", markup=True,
+                              size_hint=(None, None), size=(dp(76), dp(28)),
+                              background_normal="", background_color=theme.SURFACE_LIGHT,
+                              color=theme.ACCENT_CYAN, font_size=dp(theme.FONT_LABEL))
+            info_btn.bind(on_release=lambda _, eid=catalog_exercise["id"]:
+                          ExerciseDetailPopup(exercise_id=eid).open())
+            tag_row.add_widget(info_btn)
         card.add_widget(tag_row)
 
         name_lbl = Label(text=name, color=theme.TEXT_PRIMARY,
@@ -136,7 +147,7 @@ class WarmupWidget(BoxLayout):
             step_row = BoxLayout(orientation="horizontal", size_hint_y=None,
                                  height=dp(36), spacing=dp(6))
             step_lbl = Label(text="递增减", color=theme.TEXT_MUTED,
-                             font_size=dp(9), size_hint_x=0.2,
+                             font_size=dp(11), size_hint_x=0.2,
                              halign="right", valign="middle")
             step_lbl.bind(size=step_lbl.setter("text_size"))
             step_row.add_widget(step_lbl)
@@ -144,7 +155,7 @@ class WarmupWidget(BoxLayout):
                                  float(p.get("target_weight_step") or 0), "kg/组", 0.5))
             step_row.add_widget(self._make_stepper(pid, "target_rep_step",
                                  int(p.get("target_rep_step") or 0), "次/组", 1))
-            self._step_preview = Label(text="", color=theme.ACCENT_CYAN, font_size=dp(9),
+            self._step_preview = Label(text="", color=theme.ACCENT_CYAN, font_size=dp(11),
                                        size_hint_x=1, halign="left", valign="middle")
             self._step_preview.bind(size=self._step_preview.setter("text_size"))
             step_row.add_widget(self._step_preview)
@@ -224,14 +235,14 @@ class WarmupWidget(BoxLayout):
             self.refresh()
 
         up = Button(text="▲", background_normal="", background_color=theme.SURFACE_HIGH,
-                    color=theme.GOLD, font_size=dp(9),
+                    color=theme.GOLD, font_size=dp(11),
                     size_hint_y=None, height=dp(12))
         up.bind(on_release=lambda _: bump(1))
         val = Label(text=fmt(value), color=theme.TEXT_PRIMARY, font_size=dp(12), bold=True,
                    halign="center", valign="middle", size_hint_y=None, height=dp(16))
         val.bind(size=val.setter("text_size"))
         down = Button(text="▼", background_normal="", background_color=theme.SURFACE_HIGH,
-                      color=theme.TEXT_MUTED, font_size=dp(9),
+                      color=theme.TEXT_MUTED, font_size=dp(11),
                       size_hint_y=None, height=dp(12))
         down.bind(on_release=lambda _: bump(-1))
         box.add_widget(up); box.add_widget(val); box.add_widget(down)

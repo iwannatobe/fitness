@@ -136,7 +136,7 @@ class PresetGrid(FloatLayout):
             x_btn = Button(text="X", size_hint=(None, None), size=(x_size, x_size),
                            pos=(rel_x + btn.width - x_size * 0.5, rel_y + btn.height - x_size * 0.5),
                            background_normal="", background_color=theme.DANGER,
-                           color=(0.95,0.95,0.95,1), font_size=dp(10))
+                           color=(0.95,0.95,0.95,1), font_size=dp(12))
             x_btn.bind(on_release=lambda _, n=name: self._delete_preset(n))
             sounds.bind_feedback(x_btn, bg_color=theme.DANGER)
             self.add_widget(x_btn)

@@ -752,7 +752,7 @@ class _ImagePicker(ModalView):
                         pos_hint={"center_x": 0.5, "center_y": 0.5})
         with box.canvas.before:
             Color(*theme.SURFACE)
-            RoundedRectangle(pos=box.pos, size=box.size, radius=[dp(12)])
+            RoundedRectangle(pos=box.pos, size=box.size, radius=[dp(theme.CARD_RADIUS)])
         box.bind(pos=lambda _, p: setattr(box, "pos", p) if False else None,
                  size=lambda _, s: setattr(box, "size", s) if False else None)
 
@@ -1649,7 +1649,7 @@ class _Bubble(BoxLayout):
         self.bind(minimum_height=self.setter("height"))
         with self.canvas.before:
             Color(*bg)
-            self._r = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(12)])
+            self._r = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(theme.CARD_RADIUS)])
         self.bind(pos=lambda _, p: setattr(self._r, "pos", p),
                   size=lambda _, s: setattr(self._r, "size", s))
         if image:

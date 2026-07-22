@@ -106,7 +106,7 @@ class PlanPopup(FloatLayout):
                          size_hint=(0.92, 0.95), pos_hint={"center_x": 0.5, "center_y": 0.5})
         with card.canvas.before:
             Color(*theme.SURFACE)
-            self._card_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(12)])
+            self._card_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(theme.CARD_RADIUS)])
         card.bind(pos=lambda _, p: setattr(self._card_rect, "pos", p),
                   size=lambda _, s: setattr(self._card_rect, "size", s))
         self.add_widget(card)
@@ -153,6 +153,7 @@ class PlanPopup(FloatLayout):
             self._tmpl_press[btn] = {"name": name}
             template_grid.add_widget(btn)
         card.add_widget(template_grid)
+
 
         # Exercise grid (strength + cardio) — 缩小
         scroll = ScrollView(size_hint_y=None, height=dp(150), do_scroll_x=False, do_scroll_y=True)
@@ -222,6 +223,7 @@ class PlanPopup(FloatLayout):
             item.update({"distance": 0, "duration": 30})
         self._selected.append(item)
         self._refresh_selected()
+
     def _tmpl_release(self, btn):
         import copy
         info = self._tmpl_press[btn]
@@ -257,20 +259,20 @@ class PlanPopup(FloatLayout):
         if item.get("type") == "strength":
             line1.add_widget(self._make_stepper(idx, "sets", item.get("sets", 3), 1, 20))
             line1.add_widget(Label(text="组", color=theme.TEXT_MUTED,
-                                   size_hint_x=0.04, font_size=dp(10)))
+                                   size_hint_x=0.04, font_size=dp(12)))
             line1.add_widget(self._make_stepper(idx, "reps", item.get("reps", 10), 1, 50))
             line1.add_widget(Label(text="次", color=theme.TEXT_MUTED,
-                                   size_hint_x=0.04, font_size=dp(10)))
+                                   size_hint_x=0.04, font_size=dp(12)))
             line1.add_widget(self._make_stepper(idx, "weight", item.get("weight", 0), 0, 300))
             line1.add_widget(Label(text="kg", color=theme.TEXT_MUTED,
-                                   size_hint_x=0.04, font_size=dp(10)))
+                                   size_hint_x=0.04, font_size=dp(12)))
         else:
             line1.add_widget(self._make_stepper(idx, "distance", item.get("distance", 0), 0, 100))
             line1.add_widget(Label(text="km", color=theme.TEXT_MUTED,
-                                   size_hint_x=0.04, font_size=dp(10)))
+                                   size_hint_x=0.04, font_size=dp(12)))
             line1.add_widget(self._make_stepper(idx, "duration", item.get("duration", 30), 1, 300))
             line1.add_widget(Label(text="min", color=theme.TEXT_MUTED,
-                                   size_hint_x=0.04, font_size=dp(10)))
+                                   size_hint_x=0.04, font_size=dp(12)))
         del_btn = Button(text="×", size_hint_x=0.08,
                          background_normal="", background_color=(0, 0, 0, 0),
                          color=theme.DANGER, font_size=dp(14), bold=True)
@@ -281,16 +283,16 @@ class PlanPopup(FloatLayout):
         if item.get("type") == "strength":
             line2 = BoxLayout(size_hint_y=None, height=dp(24), spacing=dp(4))
             line2.add_widget(Label(text="递增减", color=theme.TEXT_MUTED,
-                                   size_hint_x=0.16, font_size=dp(9),
+                                   size_hint_x=0.16, font_size=dp(11),
                                    halign="right", valign="middle"))
             line2.add_widget(self._make_stepper(idx, "weight_step", item.get("weight_step", 0), -50, 50, signed=True))
             line2.add_widget(Label(text="kg/组", color=theme.TEXT_MUTED,
-                                   size_hint_x=0.08, font_size=dp(9)))
+                                   size_hint_x=0.08, font_size=dp(11)))
             line2.add_widget(self._make_stepper(idx, "rep_step", item.get("rep_step", 0), -20, 20, signed=True))
             line2.add_widget(Label(text="次/组", color=theme.TEXT_MUTED,
-                                   size_hint_x=0.08, font_size=dp(9)))
+                                   size_hint_x=0.08, font_size=dp(11)))
             self._preview_labels[idx] = None
-            preview = Label(text="", color=theme.ACCENT_CYAN, font_size=dp(8),
+            preview = Label(text="", color=theme.ACCENT_CYAN, font_size=dp(10),
                             size_hint_x=0.40, halign="left", valign="middle")
             preview.bind(size=preview.setter("text_size"))
             self._preview_labels[idx] = preview
@@ -301,7 +303,7 @@ class PlanPopup(FloatLayout):
 
     def _make_stepper(self, idx, key, initial, min_val, max_val, signed=False):
         box = BoxLayout(orientation="vertical", size_hint_x=None, width=dp(34), spacing=dp(0))
-        up = Label(text="▲", color=theme.TEXT_MUTED, font_size=dp(8),
+        up = Label(text="▲", color=theme.TEXT_MUTED, font_size=dp(10),
                    halign="center", valign="middle", size_hint_y=0.15)
         box.add_widget(up)
         init_val = int(initial)
@@ -319,7 +321,7 @@ class PlanPopup(FloatLayout):
                             size_hint_y=0.7)
         wheel.bind(size=wheel.setter("text_size"))
         box.add_widget(wheel)
-        down = Label(text="▼", color=theme.TEXT_MUTED, font_size=dp(8),
+        down = Label(text="▼", color=theme.TEXT_MUTED, font_size=dp(10),
                      halign="center", valign="middle", size_hint_y=0.15)
         box.add_widget(down)
         return box
@@ -364,11 +366,13 @@ class PlanPopup(FloatLayout):
                                  target_sets=item.get("sets"), target_reps=item.get("reps"),
                                  target_weight=item.get("weight", 0),
                                  target_weight_step=item.get("weight_step", 0),
-                                 target_rep_step=item.get("rep_step", 0))
+                                 target_rep_step=item.get("rep_step", 0),
+                                 exercise_id=item.get("exercise_id"))
             else:
                 db.add_plan_item(item_type="cardio", exercise_name=item["name"],
                                  target_distance=item.get("distance"),
-                                 target_duration=item.get("duration"))
+                                 target_duration=item.get("duration"),
+                                 exercise_id=item.get("exercise_id"))
         if self._current_tmpl_id is not None:
             tmpl = next((t for t in db.get_templates() if t["id"] == self._current_tmpl_id), None)
             if tmpl:

@@ -47,6 +47,23 @@ def init_db():
             exercise_name TEXT NOT NULL, ex_type TEXT NOT NULL,
             PRIMARY KEY (exercise_name, ex_type)
         );
+        CREATE TABLE IF NOT EXISTS exercise_catalog (
+            id TEXT PRIMARY KEY, source_id TEXT NOT NULL UNIQUE,
+            name_zh TEXT NOT NULL, name_en TEXT NOT NULL, item_type TEXT NOT NULL,
+            body_part TEXT NOT NULL, equipment TEXT NOT NULL, target TEXT NOT NULL,
+            muscle_group TEXT NOT NULL, secondary_muscles_json TEXT NOT NULL,
+            instructions_zh TEXT NOT NULL, instruction_steps_zh_json TEXT NOT NULL,
+            thumbnail_path TEXT NOT NULL, gif_path TEXT NOT NULL, attribution TEXT NOT NULL,
+            source_commit TEXT NOT NULL, instructions_polished INTEGER NOT NULL DEFAULT 0,
+            animation_frames_json TEXT NOT NULL DEFAULT '[]',
+            animation_interval REAL NOT NULL DEFAULT 0.12,
+            enabled INTEGER NOT NULL DEFAULT 1
+        );
+        CREATE TABLE IF NOT EXISTS exercise_aliases (
+            alias TEXT PRIMARY KEY,
+            exercise_id TEXT NOT NULL,
+            FOREIGN KEY(exercise_id) REFERENCES exercise_catalog(id)
+        );
         CREATE TABLE IF NOT EXISTS user_metrics (
             id INTEGER PRIMARY KEY AUTOINCREMENT, record_date DATE UNIQUE, weight_kg REAL NOT NULL
         );
@@ -76,6 +93,39 @@ def init_db():
         if "target_rep_step" not in cols2:
             conn.execute("ALTER TABLE daily_plan ADD COLUMN target_rep_step REAL DEFAULT 0")
             conn.commit()
+    if "exercise_id" not in cols:
+        conn.execute("ALTER TABLE daily_plan ADD COLUMN exercise_id TEXT")
+        conn.commit()
+    catalog_cols = {
+        row[1] for row in conn.execute("PRAGMA table_info(exercise_catalog)").fetchall()
+    }
+    if "instructions_polished" not in catalog_cols:
+        conn.execute(
+            "ALTER TABLE exercise_catalog ADD COLUMN instructions_polished "
+            "INTEGER NOT NULL DEFAULT 0"
+        )
+        conn.commit()
+    if "animation_frames_json" not in catalog_cols:
+        conn.execute(
+            "ALTER TABLE exercise_catalog ADD COLUMN animation_frames_json "
+            "TEXT NOT NULL DEFAULT '[]'"
+        )
+        conn.commit()
+    if "animation_interval" not in catalog_cols:
+        conn.execute(
+            "ALTER TABLE exercise_catalog ADD COLUMN animation_interval "
+            "REAL NOT NULL DEFAULT 0.12"
+        )
+        conn.commit()
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_catalog_name_zh ON exercise_catalog(name_zh)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_catalog_body_part ON exercise_catalog(body_part)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_catalog_equipment ON exercise_catalog(equipment)"
+    )
     existing = conn.execute("SELECT COUNT(*) FROM workout_templates").fetchone()[0]
     if existing == 0:
         for name, items in DEFAULT_TEMPLATES:
@@ -93,3 +143,5 @@ def init_db():
                              (name, json.dumps(items, ensure_ascii=False)))
     conn.commit()
     conn.close()
+    from models.catalog_model import sync_catalog
+    sync_catalog()

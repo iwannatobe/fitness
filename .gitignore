@@ -18,6 +18,7 @@ _pyc_backup/
 *.log
 *.orig
 *.db
+!assets/catalog/exercises.db
 skills-lock.json
 app_*.txt
 app_debug.log

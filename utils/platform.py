@@ -1,4 +1,5 @@
 """Platform-safe font and path resolution."""
+import configparser
 import os
 from kivy.utils import platform as _platform
 from kivy.app import App
@@ -39,6 +40,25 @@ def get_symbol_font_path():
 
 def get_db_path():
     return os.path.join(_data_dir(), "fitness.db")
+
+
+def get_app_version():
+    """Read the installed package version on Android or buildozer.spec on desktop."""
+    if _platform == "android":
+        try:
+            from jnius import autoclass
+            activity = autoclass("org.kivy.android.PythonActivity").mActivity
+            info = activity.getPackageManager().getPackageInfo(
+                activity.getPackageName(), 0)
+            return str(info.versionName)
+        except Exception:
+            return "?"
+    try:
+        parser = configparser.ConfigParser()
+        parser.read(os.path.join(_APP_DIR, "buildozer.spec"), encoding="utf-8")
+        return parser.get("app", "version", fallback="?")
+    except Exception:
+        return "?"
 
 def is_android():
     return _platform == "android"

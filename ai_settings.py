@@ -52,19 +52,19 @@ class AISettingsPopup(ModalView):
         root = BoxLayout(orientation="vertical")
         with root.canvas.before:
             Color(*theme.SURFACE)
-            self._bg = RoundedRectangle(pos=root.pos, size=root.size, radius=[dp(14)])
+            self._bg = RoundedRectangle(pos=root.pos, size=root.size, radius=[dp(theme.CARD_RADIUS)])
             Color(*theme.BORDER)
             self._line = Line(
-                rounded_rectangle=(root.x, root.y, root.width, root.height, dp(14)),
+                rounded_rectangle=(root.x, root.y, root.width, root.height, dp(theme.CARD_RADIUS)),
                 width=dp(1),
             )
         root.bind(
             pos=lambda _, p: (setattr(self._bg, "pos", p),
                                setattr(self._line, "rounded_rectangle",
-                                       (p[0], p[1], root.width, root.height, dp(14)))),
+                                        (p[0], p[1], root.width, root.height, dp(theme.CARD_RADIUS)))),
             size=lambda _, s: (setattr(self._bg, "size", s),
                                setattr(self._line, "rounded_rectangle",
-                                       (root.x, root.y, s[0], s[1], dp(14)))),
+                                        (root.x, root.y, s[0], s[1], dp(theme.CARD_RADIUS)))),
         )
         root.padding = [dp(16), dp(14)]
         root.spacing = dp(10)
@@ -83,7 +83,7 @@ class AISettingsPopup(ModalView):
 
         preset_row = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(5))
         for name in PROVIDERS:
-            b = Button(text=name, markup=True, font_size=dp(11),
+            b = Button(text=name, markup=True, font_size=dp(theme.FONT_LABEL),
                        background_normal="", background_color=theme.SURFACE_HIGH,
                        color=theme.TEXT_SECONDARY)
             b.bind(on_release=lambda _, n=name: self._apply_preset(n))
@@ -133,7 +133,7 @@ class AISettingsPopup(ModalView):
     def _field(self, title, value, password=False, multiline=False, height=dp(48), hint=""):
         box = BoxLayout(orientation="vertical", size_hint_y=None,
                         height=height + dp(16), spacing=dp(2))
-        lbl = Label(text=title, color=theme.TEXT_MUTED, font_size=dp(11),
+        lbl = Label(text=title, color=theme.TEXT_MUTED, font_size=dp(theme.FONT_LABEL),
                     halign="left", valign="middle", size_hint_y=None, height=dp(14))
         lbl.bind(size=lbl.setter("text_size"))
         box.add_widget(lbl)
@@ -149,7 +149,7 @@ class AISettingsPopup(ModalView):
         box = BoxLayout(orientation="vertical", size_hint_y=None,
                         spacing=dp(2))
         box.bind(minimum_height=box.setter("height"))
-        lbl = Label(text="Model", color=theme.TEXT_MUTED, font_size=dp(11),
+        lbl = Label(text="Model", color=theme.TEXT_MUTED, font_size=dp(theme.FONT_LABEL),
                     halign="left", valign="middle", size_hint_y=None, height=dp(14))
         lbl.bind(size=lbl.setter("text_size"))
         box.add_widget(lbl)
@@ -199,7 +199,7 @@ class AISettingsPopup(ModalView):
             cur = models[0] if models else ""
         for m in models:
             label = info.get("labels", {}).get(m, m)
-            b = Button(text=label, markup=True, font_size=dp(10),
+            b = Button(text=label, markup=True, font_size=dp(theme.FONT_LABEL),
                        size_hint_y=None, height=dp(32),
                        background_normal="", background_color=theme.SURFACE_HIGH,
                        color=theme.TEXT_SECONDARY)

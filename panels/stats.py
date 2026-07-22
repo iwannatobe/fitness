@@ -258,9 +258,9 @@ class ChartWidget(BoxLayout):
         ox, oy = self.x, self.y
         with self.canvas.before:
             Color(*theme.SURFACE)
-            RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(12)])
+            RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(theme.CARD_RADIUS)])
             Color(*theme.BORDER)
-            Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(12)), width=dp(1))
+            Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(theme.CARD_RADIUS)), width=dp(1))
         margin_left = dp(42)
         margin_bottom = dp(24)
         margin_top = dp(20)
@@ -290,7 +290,7 @@ class ChartWidget(BoxLayout):
                 bx = ox + margin_left + i * step + step * 0.2
                 by = baseline_y + bar_h + dp(2)
                 if val > 0 and (bar_count <= 14 or i % max(1, bar_count // 10) == 0):
-                    lbl = CoreLabel(text=str(int(val)), font_size=dp(9),
+                    lbl = CoreLabel(text=str(int(val)), font_size=dp(11),
                                     color=(0.7, 0.7, 0.75, 1), font_name="Roboto")
                     lbl.refresh()
                     tex, ts = lbl.texture, lbl.texture.size
@@ -300,7 +300,7 @@ class ChartWidget(BoxLayout):
             for i, lbl_text in enumerate(self._labels):
                 bx = ox + margin_left + i * step + step * 0.2 + bar_w / 2
                 if bar_count <= 14 or i % max(1, bar_count // 10) == 0:
-                    cl = CoreLabel(text=lbl_text, font_size=dp(8),
+                    cl = CoreLabel(text=lbl_text, font_size=dp(10),
                                    color=(0.5, 0.5, 0.55, 1), font_name="Roboto")
                     cl.refresh()
                     tex, ts = cl.texture, cl.texture.size

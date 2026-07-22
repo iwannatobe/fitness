@@ -38,18 +38,21 @@ class HamburgerButton(Button):
 
 
 class TopBar(BoxLayout):
-    def __init__(self, title_text, on_menu, **kwargs):
-        super().__init__(size_hint_y=None, height=dp(52), **kwargs)
+    def __init__(self, title_text, on_menu=None, **kwargs):
+        super().__init__(size_hint_y=None, height=dp(58), **kwargs)
         with self.canvas.before:
             Color(*theme.SURFACE)
             self._rect = Rectangle(size=self.size, pos=self.pos)
             Color(*theme.HAIRLINE)
             self._line = Rectangle(pos=(self.x, self.y), size=(self.width, dp(1)))
         self.bind(size=self._update_rect, pos=self._update_rect)
-        burger = HamburgerButton()
-        burger.bind(on_release=lambda _: on_menu())
-        self.add_widget(burger)
-        self.add_widget(Label(text=title_text, font_size=dp(theme.FONT_H2),
+        if on_menu:
+            burger = HamburgerButton()
+            burger.bind(on_release=lambda _: on_menu())
+            self.add_widget(burger)
+        else:
+            self.add_widget(BoxLayout(size_hint=(None, None), size=(dp(44), dp(44))))
+        self.add_widget(Label(text=title_text, font_size=dp(theme.FONT_LABEL),
                               color=theme.TEXT_PRIMARY, bold=True,
                               halign="left", valign="middle"))
         spacer = BoxLayout(size_hint=(None, None), size=(dp(44), dp(44)))

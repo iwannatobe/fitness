@@ -177,9 +177,9 @@ class FormPanel(BoxLayout):
                         padding=[dp(12), 0])
         with row.canvas.before:
             Color(*theme.SURFACE)
-            bg = RoundedRectangle(pos=row.pos, size=row.size, radius=[dp(10)])
+            bg = RoundedRectangle(pos=row.pos, size=row.size, radius=[dp(theme.CARD_RADIUS)])
             Color(*theme.BORDER)
-            border = Line(rounded_rectangle=(row.x, row.y, row.width, row.height, dp(10)),
+            border = Line(rounded_rectangle=(row.x, row.y, row.width, row.height, dp(theme.CARD_RADIUS)),
                           width=dp(1))
         row._bg_rect = bg
         row._border_line = border
@@ -201,4 +201,4 @@ class FormPanel(BoxLayout):
             row._bg_rect.pos = row.pos
             row._bg_rect.size = row.size
         if hasattr(row, "_border_line"):
-            row._border_line.rounded_rectangle = (row.x, row.y, row.width, row.height, dp(10))
+            row._border_line.rounded_rectangle = (row.x, row.y, row.width, row.height, dp(theme.CARD_RADIUS))

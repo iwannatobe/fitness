@@ -12,6 +12,7 @@ from kivy.metrics import dp
 from config import theme
 from utils.instrument import StatusLamp
 import database as db
+from llm_config import LLMConfig
 import sounds
 
 
@@ -133,21 +134,23 @@ class SystemBus(BoxLayout):
         rails = BoxLayout(size_hint_y=None, height=dp(11), spacing=dp(3))
         for label_text, color, breathe in (
                 ("LNK", theme.VFD_BLUE, False),
-                ("DAT", theme.VFD_CYAN, True),
+                ("AI", theme.VFD_ORANGE, True),
                 ("SYN", theme.LED_GREEN, False)):
             rail = BoxLayout(spacing=dp(2))
             label = Label(text=label_text, color=theme.TEXT_MUTED, font_size=dp(8),
                           size_hint_x=None, width=dp(18), halign="left", valign="middle")
             label.bind(size=label.setter("text_size"))
             rail.add_widget(label)
-            rail.add_widget(StatusLamp(color=color, breathe=breathe,
-                                       size=(dp(20), dp(3)),
-                                       pos_hint={"center_y": 0.5}))
+            lamp = StatusLamp(color=color, breathe=breathe,
+                              size=(dp(20), dp(3)), pos_hint={"center_y": 0.5})
+            if label_text == "AI":
+                self._ai_lamp = lamp
+            rail.add_widget(lamp)
             rails.add_widget(rail)
         self.add_widget(rails)
 
         scan_row = BoxLayout(size_hint_y=None, height=dp(11), spacing=dp(4))
-        scan_label = Label(text="BUS", color=theme.TEXT_MUTED, font_size=dp(8),
+        scan_label = Label(text="AI", color=theme.TEXT_MUTED, font_size=dp(8),
                            size_hint_x=None, width=dp(18), halign="left", valign="middle")
         scan_label.bind(size=scan_label.setter("text_size"))
         scan_row.add_widget(scan_label)
@@ -157,6 +160,7 @@ class SystemBus(BoxLayout):
         self._refresh_time()
 
     def _refresh_time(self, *_):
+        self._refresh_ai_state()
         session = db.get_today_training_session()
         if not session:
             self._time.text = "--:--:--"
@@ -176,6 +180,12 @@ class SystemBus(BoxLayout):
         minutes, seconds = divmod(remainder, 60)
         self._time.text = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         return True
+
+    def _refresh_ai_state(self):
+        try:
+            self._ai_lamp.color = theme.LED_GREEN if LLMConfig.load().is_configured else theme.VFD_ORANGE
+        except Exception:
+            self._ai_lamp.color = theme.VFD_ORANGE
 
     def _draw_frame(self, *_):
         self._bg.pos = self.pos

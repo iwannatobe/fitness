@@ -284,6 +284,20 @@ AI_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_date_overview",
+            "description": "查询任意日期的完整汇总：饮食(餐别/食物/热量)、力量训练、有氧训练、训练计划、身体数据(体重/体脂/围度)、摄入总热量、训练消耗热量、匹配模板。日期格式 YYYY-MM-DD。示例：问「昨天吃了什么」→ 计算昨天日期后调用此工具；问「7月14日的训练记录」→ 用 2026-07-14 调用",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "date": {"type": "string", "description": "日期，格式 YYYY-MM-DD，如 2026-07-14"},
+                },
+                "required": ["date"],
+            },
+        },
+    },
 ]
 
 
@@ -1481,6 +1495,8 @@ class AIChatPanel(BoxLayout):
                 )
                 Clock.schedule_once(lambda dt: self._refresh_calorie_bar(), 0)
                 return f"ok: 已添加{args['meal_type']}，{args['food_summary']}，约{int(args['total_kcal'])}kcal"
+            if name == "get_date_overview":
+                return json.dumps(db.get_date_overview(args["date"]), ensure_ascii=False, default=str)
             return f"error: 未知工具 {name}"
         except Exception as e:
             return f"error: {e}"

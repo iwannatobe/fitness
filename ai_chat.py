@@ -59,7 +59,7 @@ AI_TOOLS = [
         "type": "function",
         "function": {
             "name": "add_plan_item",
-            "description": "向今日训练计划添加一个项目（动作）",
+            "description": "向今日训练计划添加一个项目（动作）。用 search_catalog 查到的动作会自动关联 GIF 指导。添加后自动注册到力量/有氧面板的预设列表。",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -295,6 +295,21 @@ AI_TOOLS = [
                     "date": {"type": "string", "description": "日期，格式 YYYY-MM-DD，如 2026-07-14"},
                 },
                 "required": ["date"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_catalog",
+            "description": "搜索动作资料库（已有 GIF 动画和指导步骤的动作）。返回匹配的动作名、部位、器械、是否含动画帧。当用户说「加一个练胸的动作」「有没有深蹲的教学」时，先搜此库再建议。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "搜索关键词，支持中英文动作名/器械/肌群"},
+                    "body_part": {"type": "string", "description": "部位过滤，如 chest/back/upper legs/shoulders/upper arms/waist"},
+                },
+                "required": ["query"],
             },
         },
     },
@@ -1411,16 +1426,25 @@ class AIChatPanel(BoxLayout):
                     "completed": bool(p.get("completed")),
                 } for p in plan], ensure_ascii=False)
             if name == "add_plan_item":
+                item_type = args["item_type"]
+                exercise_name = args["exercise_name"]
+                # 自动注册到 custom_exercises，让面板预设列表可见
+                db.add_custom_exercise(item_type, exercise_name)
+                # 匹配已有动作资料库条目，关联 GIF 和指导步骤
+                catalog_exercise = db.find_catalog_exercise(None, exercise_name)
+                exercise_id = catalog_exercise["id"] if catalog_exercise else None
                 db.add_plan_item(
-                    item_type=args["item_type"], exercise_name=args["exercise_name"],
+                    item_type=item_type, exercise_name=exercise_name,
                     target_sets=args.get("sets"), target_reps=args.get("reps"),
                     target_weight=args.get("weight"),
                     target_weight_step=args.get("weight_step", 0),
                     target_rep_step=args.get("rep_step", 0),
                     target_distance=args.get("distance"),
-                    target_duration=args.get("duration"))
+                    target_duration=args.get("duration"),
+                    exercise_id=exercise_id)
                 self._plan_changed = True
-                return "ok: 已添加项目"
+                catalog_msg = "，已关联动作指导" if catalog_exercise else ""
+                return f"ok: 已添加 {exercise_name}{catalog_msg}"
             if name == "update_plan_item":
                 pid = args["plan_id"]
                 fld = {"sets": "target_sets", "reps": "target_reps",
@@ -1497,6 +1521,18 @@ class AIChatPanel(BoxLayout):
                 return f"ok: 已添加{args['meal_type']}，{args['food_summary']}，约{int(args['total_kcal'])}kcal"
             if name == "get_date_overview":
                 return json.dumps(db.get_date_overview(args["date"]), ensure_ascii=False, default=str)
+            if name == "search_catalog":
+                results = db.search_catalog(query=args.get("query", ""),
+                                           body_part=args.get("body_part", ""),
+                                           limit=12)
+                summary = [{
+                    "name": e["name_zh"],
+                    "name_en": e["name_en"],
+                    "body_part": e["body_part"],
+                    "equipment": e["equipment"],
+                    "has_animation": len(e.get("animation_frames", [])) > 0,
+                } for e in results]
+                return json.dumps(summary, ensure_ascii=False)
             return f"error: 未知工具 {name}"
         except Exception as e:
             return f"error: {e}"
@@ -1636,6 +1672,10 @@ class AIChatPanel(BoxLayout):
                     ml._task_card.refresh()
                 if hasattr(ml, "_warmup"):
                     ml._warmup.refresh()
+                if hasattr(ml, "_strength_panel"):
+                    ml._strength_panel._refresh_list()
+                if hasattr(ml, "_cardio_panel"):
+                    ml._cardio_panel._refresh_list()
             except Exception:
                 pass
         if ok:

@@ -113,6 +113,20 @@ class CardioPanel(FormPanel):
             if r["record_date"] != target: continue
             txt = f"{r['exercise_type']}  {r['distance']}km  {r['duration']}min"
             self.record_list.add_widget(self._make_record_row(txt, r["id"], self._delete))
+        self._refresh_presets()
+
+    def _refresh_presets(self):
+        if hasattr(self, "_preset_grid") and self._preset_grid.parent:
+            self._preset_grid.parent.remove_widget(self._preset_grid)
+        presets = list(CARDIO_PRESETS)
+        for name in db.get_custom_exercises("cardio"):
+            if name not in presets:
+                presets.append(name)
+        self._preset_grid = PresetGrid(presets, on_tap=self._on_preset,
+                                        on_custom=self._on_custom,
+                                        on_delete=lambda name: self._on_delete_preset(name, "cardio"),
+                                        size_hint_y=None)
+        self.form_area.add_widget(self._preset_grid, index=0)
 
     def _delete(self, rid):
         db.delete_cardio(rid)

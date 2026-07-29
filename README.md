@@ -5,7 +5,11 @@
 ## 界面截图
 
 <p align="center">
-  <img src="screenshots/screenshot_home.png" width="320" alt="Fitness Tracker Home">
+  <img src="screenshots/screenshot_home.png" width="200" alt="Home">
+  <img src="screenshots/screenshot_strength.png" width="200" alt="Strength">
+  <img src="screenshots/screenshot_ai.png" width="200" alt="AI Chat">
+  <img src="screenshots/screenshot_stats.png" width="200" alt="Stats">
+  <img src="screenshots/screenshot_detail.png" width="200" alt="Day Detail">
 </p>
 
 ## 功能

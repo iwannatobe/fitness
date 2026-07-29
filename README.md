@@ -5,10 +5,7 @@
 ## 界面截图
 
 <p align="center">
-  <img src="screenshots/screenshot_home0001.png" width="180" alt="Home">
-  <img src="screenshots/screenshot_strength0001.png" width="180" alt="Strength">
-  <img src="screenshots/screenshot_ai0001.png" width="180" alt="AI Chat">
-  <img src="screenshots/screenshot_detail0001.png" width="180" alt="Day Detail">
+  <img src="screenshots/screenshot_home.png" width="320" alt="Fitness Tracker Home">
 </p>
 
 ## 功能

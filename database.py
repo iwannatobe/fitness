@@ -5,7 +5,8 @@ from models.cardio_model import add_cardio, get_last_cardio, get_cardio_records,
 from models.body_model import add_body, get_body_records, delete_body
 from models.plan_model import clear_today_plan, add_plan_item, get_today_plan, complete_plan_item, delete_plan_item, update_plan_item
 from models.training_session_model import (
-    finish_today_training_session_if_complete, get_today_training_session,
+    cancel_rest_timer, finish_today_training_session_if_complete,
+    get_today_training_session, mark_rest_timer_notified, start_rest_timer,
     start_today_training_session,
 )
 from models.catalog_model import (

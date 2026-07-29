@@ -251,6 +251,8 @@ class MainLayout(FloatLayout):
                     new_item["weight"] = plan_item.get("target_weight") or tp_item.get("weight", 0)
                     new_item["weight_step"] = int(plan_item.get("target_weight_step") or tp_item.get("weight_step", 0))
                     new_item["rep_step"] = int(plan_item.get("target_rep_step") or tp_item.get("rep_step", 0))
+                    new_item["rest_seconds"] = int(
+                        plan_item.get("target_rest_seconds") or tp_item.get("rest_seconds", 120))
                 else:
                     new_item["distance"] = plan_item.get("target_distance") or tp_item.get("distance", 0)
                     new_item["duration"] = int(plan_item.get("target_duration") or tp_item.get("duration", 0))

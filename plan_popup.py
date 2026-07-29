@@ -13,10 +13,10 @@ import database as db
 from panels.strength import STRENGTH_PRESETS
 from panels.cardio import CARDIO_PRESETS
 from panels.preset_grid import EXERCISE_ICONS, EXERCISE_COLORS, _rgba_hex
-from config.constants import TEMPLATE_ICONS, TEMPLATE_COLORS
+from config.constants import TEMPLATE_ICONS, TEMPLATE_COLORS, get_default_rest_seconds
 
 class _WheelLabel(Label):
-    def __init__(self, plan_popup, idx, key, min_val, max_val, signed=False, **kwargs):
+    def __init__(self, plan_popup, idx, key, min_val, max_val, signed=False, step=1, **kwargs):
         super().__init__(**kwargs)
         self.pp = plan_popup
         self.idx = idx
@@ -24,6 +24,7 @@ class _WheelLabel(Label):
         self.min_val = min_val
         self.max_val = max_val
         self.signed = signed
+        self.step = step
         self._last_y = None
 
     def _format(self, val):
@@ -57,7 +58,7 @@ class _WheelLabel(Label):
                 delta = 1 if dy > 0 else -1
                 item = self.pp._selected[self.idx]
                 cur = int(float(item.get(self.key, 0)))
-                new_val = max(self.min_val, min(self.max_val, cur + delta))
+                new_val = max(self.min_val, min(self.max_val, cur + delta * self.step))
                 self.pp._update_item(self.idx, self.key, new_val)
                 self.text = self._format(new_val)
                 self._last_y = touch.y
@@ -226,7 +227,8 @@ class PlanPopup(FloatLayout):
         self._current_tmpl_id = None
         item = {"type": ex_type, "name": name}
         if ex_type == "strength":
-            item.update({"sets": 3, "reps": 10, "weight": 0})
+            item.update({"sets": 3, "reps": 10, "weight": 0,
+                         "rest_seconds": get_default_rest_seconds(name)})
         else:
             item.update({"distance": 0, "duration": 30})
         self._selected.append(item)
@@ -296,9 +298,17 @@ class PlanPopup(FloatLayout):
             line2.add_widget(self._make_stepper(idx, "rep_step", item.get("rep_step", 0), -20, 20, signed=True))
             line2.add_widget(Label(text="次/组", color=theme.TEXT_MUTED,
                                    size_hint_x=0.08, font_size=dp(11)))
+            line2.add_widget(Label(text="休", color=theme.TEXT_MUTED,
+                                   size_hint_x=0.05, font_size=dp(11)))
+            line2.add_widget(self._make_stepper(
+                idx, "rest_seconds",
+                item.get("rest_seconds", get_default_rest_seconds(item.get("name"))),
+                30, 300, step=15))
+            line2.add_widget(Label(text="秒", color=theme.TEXT_MUTED,
+                                   size_hint_x=0.05, font_size=dp(11)))
             self._preview_labels[idx] = None
             preview = Label(text="", color=theme.VFD_CYAN, font_size=dp(10),
-                            size_hint_x=0.40, halign="left", valign="middle")
+                            size_hint_x=0.24, halign="left", valign="middle")
             preview.bind(size=preview.setter("text_size"))
             self._preview_labels[idx] = preview
             line2.add_widget(preview)
@@ -306,7 +316,7 @@ class PlanPopup(FloatLayout):
             self._update_preview(idx, item)
         return row
 
-    def _make_stepper(self, idx, key, initial, min_val, max_val, signed=False):
+    def _make_stepper(self, idx, key, initial, min_val, max_val, signed=False, step=1):
         box = BoxLayout(orientation="vertical", size_hint_x=None, width=dp(34), spacing=dp(0))
         up = Label(text="▲", color=theme.TEXT_MUTED, font_size=dp(10),
                    halign="center", valign="middle", size_hint_y=0.15)
@@ -321,7 +331,7 @@ class PlanPopup(FloatLayout):
             init_text = str(init_val)
             init_color = theme.TEXT_PRIMARY
         wheel = _WheelLabel(plan_popup=self, idx=idx, key=key, min_val=min_val, max_val=max_val,
-                            signed=signed, text=init_text, color=init_color,
+                            signed=signed, step=step, text=init_text, color=init_color,
                             font_size=dp(14), bold=True, halign="center", valign="middle",
                             size_hint_y=0.7)
         wheel.bind(size=wheel.setter("text_size"))
@@ -370,9 +380,11 @@ class PlanPopup(FloatLayout):
                 db.add_plan_item(item_type="strength", exercise_name=item["name"],
                                  target_sets=item.get("sets"), target_reps=item.get("reps"),
                                  target_weight=item.get("weight", 0),
-                                 target_weight_step=item.get("weight_step", 0),
-                                 target_rep_step=item.get("rep_step", 0),
-                                 exercise_id=item.get("exercise_id"))
+                                  target_weight_step=item.get("weight_step", 0),
+                                  target_rep_step=item.get("rep_step", 0),
+                                  target_rest_seconds=item.get(
+                                      "rest_seconds", get_default_rest_seconds(item.get("name"))),
+                                  exercise_id=item.get("exercise_id"))
             else:
                 db.add_plan_item(item_type="cardio", exercise_name=item["name"],
                                  target_distance=item.get("distance"),

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import os
+import weakref
 
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
@@ -46,13 +47,62 @@ class HamburgerButton(Button):
                 Rectangle(pos=(x, cy + (i - 1) * (h + gap)), size=(w, h))
 
 
+class RestTimerController:
+    """Single wall-clock timer shared by every page's persistent topbar."""
+
+    def __init__(self):
+        self._meters = weakref.WeakSet()
+        self._event = Clock.schedule_interval(self._tick, 0.25)
+
+    def register(self, meter):
+        self._meters.add(meter)
+        self._tick()
+
+    def start_current(self):
+        current = next((item for item in db.get_today_plan() if not item["completed"]), None)
+        if current is None or current["item_type"] != "strength":
+            return False
+        duration = int(current.get("target_rest_seconds") or 120)
+        if not db.start_rest_timer(current["id"], duration):
+            return False
+        sounds.play_click()
+        self._tick()
+        return True
+
+    def _tick(self, *_):
+        session = db.get_today_training_session()
+        progress = 0.0
+        remaining = None
+        complete = False
+        if session and session.get("rest_ends_at") and session.get("rest_duration_seconds"):
+            try:
+                ends_at = datetime.fromisoformat(session["rest_ends_at"])
+                duration = max(1, int(session["rest_duration_seconds"]))
+                remaining_float = (ends_at - datetime.now()).total_seconds()
+                remaining = max(0, int(remaining_float + 0.999))
+                progress = min(1.0, max(0.0, 1.0 - remaining_float / duration))
+                complete = remaining_float <= 0
+            except (TypeError, ValueError):
+                pass
+        for meter in tuple(self._meters):
+            meter.set_timer_state(progress, remaining, complete)
+        if complete and session and not session.get("rest_notified"):
+            if db.mark_rest_timer_notified():
+                sounds.play_rest_complete()
+        return True
+
+
+_REST_TIMER = RestTimerController()
+
+
 class BusMeter(Widget):
-    """A restrained system-bus scan window for the persistent topbar status."""
+    """Clickable between-set recovery timer progress."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._phase = 0
-        self._pulse = Clock.schedule_interval(self._advance, 0.32)
+        self._progress = 0.0
+        self._complete = False
+        self.status_label = None
         with self.canvas:
             self._bg_color = Color(*theme.DISPLAY_GLASS)
             self._bg = Rectangle(pos=self.pos, size=self.size)
@@ -65,11 +115,31 @@ class BusMeter(Widget):
                 self._segments.append((color, rect))
         self.bind(pos=self._draw, size=self._draw)
         self._draw()
+        _REST_TIMER.register(self)
 
-    def _advance(self, _dt):
-        self._phase = (self._phase + 1) % len(self._segments)
+    def set_timer_state(self, progress, remaining, complete):
+        self._progress = progress
+        self._complete = complete
+        if self.status_label is not None:
+            self.status_label.text = "RST" if remaining is None else str(remaining)
+            self.status_label.color = (theme.LED_GREEN if complete else
+                                       theme.VFD_ORANGE if remaining is not None else
+                                       theme.TEXT_MUTED)
         self._draw()
-        return True
+
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            touch.grab(self)
+            return True
+        return super().on_touch_down(touch)
+
+    def on_touch_up(self, touch):
+        if touch.grab_current is self:
+            touch.ungrab(self)
+            if self.collide_point(*touch.pos):
+                _REST_TIMER.start_current()
+            return True
+        return super().on_touch_up(touch)
 
     def _draw(self, *_):
         self._bg.pos = self.pos
@@ -80,28 +150,18 @@ class BusMeter(Widget):
         segment_h = max(dp(2), self.height - dp(6))
         x = self.x + dp(3)
         y = self.y + dp(3)
+        lit_count = int(self._progress * len(self._segments) + 0.999)
         for index, (color, rect) in enumerate(self._segments):
-            distance = (index - self._phase) % len(self._segments)
-            if distance == 0:
-                color.rgba = theme.VFD_CYAN
-            elif distance in (1, len(self._segments) - 1):
-                color.rgba = theme.VFD_CYAN_DIM
-            elif index % 3 == 0:
-                color.rgba = theme.VFD_BLUE_DIM
+            if index < lit_count:
+                color.rgba = theme.LED_GREEN if self._complete else theme.VFD_ORANGE
             else:
                 color.rgba = theme.METAL_DARK
             rect.pos = (x, y)
             rect.size = (segment_w, segment_h)
             x += segment_w + gap
 
-    def on_parent(self, _widget, parent):
-        if parent is None:
-            self.stop()
-
     def stop(self):
-        if self._pulse is not None:
-            self._pulse.cancel()
-            self._pulse = None
+        pass
 
 
 class SystemBus(BoxLayout):
@@ -150,11 +210,14 @@ class SystemBus(BoxLayout):
         self.add_widget(rails)
 
         scan_row = BoxLayout(size_hint_y=None, height=dp(11), spacing=dp(4))
-        scan_label = Label(text="AI", color=theme.TEXT_MUTED, font_size=dp(8),
-                           size_hint_x=None, width=dp(18), halign="left", valign="middle")
+        scan_label = Label(text="RST", color=theme.TEXT_MUTED, font_size=dp(8),
+                           size_hint_x=None, width=dp(24), halign="left", valign="middle")
         scan_label.bind(size=scan_label.setter("text_size"))
         scan_row.add_widget(scan_label)
-        scan_row.add_widget(BusMeter())
+        meter = BusMeter()
+        meter.status_label = scan_label
+        _REST_TIMER._tick()
+        scan_row.add_widget(meter)
         self.add_widget(scan_row)
         self._timer = Clock.schedule_interval(self._refresh_time, 1.0)
         self._refresh_time()

@@ -40,7 +40,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT, plan_date DATE NOT NULL, item_type TEXT NOT NULL,
             exercise_name TEXT NOT NULL, target_sets INTEGER, target_reps INTEGER,
             target_weight REAL, target_weight_step REAL DEFAULT 0, target_rep_step REAL DEFAULT 0,
-            target_distance REAL, target_duration INTEGER, completed INTEGER DEFAULT 0,
+            target_distance REAL, target_duration INTEGER,
+            target_rest_seconds INTEGER NOT NULL DEFAULT 120, completed INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS custom_exercises (
@@ -85,7 +86,12 @@ def init_db():
             session_date DATE PRIMARY KEY,
             started_at TEXT NOT NULL,
             completed_at TEXT,
-            duration_seconds INTEGER
+            duration_seconds INTEGER,
+            rest_plan_id INTEGER,
+            rest_started_at TEXT,
+            rest_ends_at TEXT,
+            rest_duration_seconds INTEGER,
+            rest_notified INTEGER NOT NULL DEFAULT 1
         );
     """)
     # 确保 user_profile 有默认行
@@ -102,6 +108,25 @@ def init_db():
     if "exercise_id" not in cols:
         conn.execute("ALTER TABLE daily_plan ADD COLUMN exercise_id TEXT")
         conn.commit()
+    if "target_rest_seconds" not in cols:
+        conn.execute(
+            "ALTER TABLE daily_plan ADD COLUMN target_rest_seconds "
+            "INTEGER NOT NULL DEFAULT 120"
+        )
+        conn.commit()
+    session_cols = {
+        row[1] for row in conn.execute("PRAGMA table_info(training_sessions)").fetchall()
+    }
+    for column, definition in (
+        ("rest_plan_id", "INTEGER"),
+        ("rest_started_at", "TEXT"),
+        ("rest_ends_at", "TEXT"),
+        ("rest_duration_seconds", "INTEGER"),
+        ("rest_notified", "INTEGER NOT NULL DEFAULT 1"),
+    ):
+        if column not in session_cols:
+            conn.execute(f"ALTER TABLE training_sessions ADD COLUMN {column} {definition}")
+    conn.commit()
     catalog_cols = {
         row[1] for row in conn.execute("PRAGMA table_info(exercise_catalog)").fetchall()
     }

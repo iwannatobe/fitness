@@ -68,6 +68,17 @@ def _gen_explosion(path):
     _write_wav(path, samples, rate)
 
 
+def _gen_rest_complete(path):
+    rate = 22050
+    samples = []
+    for frequency in (880, 1175):
+        for i in range(int(rate * 0.16)):
+            t = i / rate
+            samples.append(0.35 * math.exp(-t * 8) * math.sin(2 * math.pi * frequency * t))
+        samples.extend([0.0] * int(rate * 0.04))
+    _write_wav(path, samples, rate)
+
+
 def _ensure(name, gen_func):
     if name in _SOUNDS:
         return _SOUNDS[name]
@@ -132,6 +143,19 @@ def play_explosion():
         except Exception:
             pass
     _vibrate(0.3)
+
+
+def play_rest_complete():
+    if not _ENABLED:
+        return
+    snd = _ensure("rest_complete", _gen_rest_complete)
+    if snd:
+        try:
+            snd.stop()
+            snd.play()
+        except Exception:
+            pass
+    _vibrate(0.2)
 
 
 def lighten(color, factor=0.28):

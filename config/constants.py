@@ -1,6 +1,26 @@
 # App-wide constants
 SCREEN_ORDER = ["home", "strength", "cardio", "body", "stats"]
 DB_FILENAME = "fitness.db"
+DEFAULT_REST_SECONDS = 120
+
+
+def get_default_rest_seconds(exercise_name):
+    """Return a conservative between-set rest default for a strength exercise."""
+    name = (exercise_name or "").lower()
+    high_fatigue = (
+        "深蹲", "硬拉", "抓举", "挺举", "翻举", "高翻", "推举", "摆动", "负重行走",
+        "squat", "deadlift", "snatch", "clean", "jerk", "push press", "swing", "carry",
+    )
+    isolation = (
+        "弯举", "下压", "飞鸟", "侧平举", "前平举", "腿屈伸", "腿弯举", "提踵",
+        "髋外展", "髋内收", "面拉", "卷腹", "curl", "extension", "pushdown", "fly",
+        "raise", "leg curl", "calf raise", "abduction", "adduction", "face pull", "crunch",
+    )
+    if any(term in name for term in high_fatigue):
+        return 180
+    if any(term in name for term in isolation):
+        return 90
+    return DEFAULT_REST_SECONDS
 
 DEFAULT_STRENGTH_PRESETS = [
     "卧推", "深蹲", "硬拉", "引体向上", "杠铃划船", "推举", "哑铃弯举", "臂屈伸",

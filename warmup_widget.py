@@ -207,7 +207,10 @@ class WarmupWidget(BoxLayout):
             row.add_widget(self._make_stepper(pid, "target_reps",
                                      int(p.get("target_reps") or 0), "次", 1))
             row.add_widget(self._make_stepper(pid, "target_weight",
-                                     float(p.get("target_weight") or 0), "kg", 0.5))
+                                      float(p.get("target_weight") or 0), "kg", 0.5))
+            row.add_widget(self._make_stepper(pid, "target_rest_seconds",
+                                      int(p.get("target_rest_seconds") or 120), "秒休息", 15,
+                                      min_value=30, max_value=300))
         else:
             row.add_widget(self._make_stepper(pid, "target_distance",
                                      float(p.get("target_distance") or 0), "km", 0.5))
@@ -232,7 +235,8 @@ class WarmupWidget(BoxLayout):
             per.append(f"{int(gw)}/{int(gr)}")
         lbl.text = "  ".join(per)
 
-    def _make_stepper(self, pid, key, value, unit, step=1):
+    def _make_stepper(self, pid, key, value, unit, step=1,
+                      min_value=0, max_value=None):
         box = BoxLayout(orientation="vertical", size_hint_x=1, spacing=dp(2))
 
         def fmt(v):
@@ -244,11 +248,11 @@ class WarmupWidget(BoxLayout):
             new = value + delta * step
             if step < 1:
                 new = round(new, 2)
-                if new < 0:
-                    new = 0.0
             else:
-                if new < 0:
-                    new = 0
+                new = int(new)
+            new = max(min_value, new)
+            if max_value is not None:
+                new = min(max_value, new)
             db.update_plan_item(pid, **{key: new})
             self.refresh()
 
@@ -290,6 +294,7 @@ class WarmupWidget(BoxLayout):
                     new_weight = weight
                 db.update_plan_item(pid, target_reps=new_reps, target_weight=new_weight)
         db.complete_plan_item(pid)
+        db.cancel_rest_timer(pid)
         self.refresh()
         if self._on_complete:
             self._on_complete()

@@ -31,7 +31,7 @@ jobs:
         run: |
           export PATH="$PATH:$HOME/.local/bin"
           export PYTHONUNBUFFERED=1
-          buildozer -v ios debug 2>&1 | tee ios-build.log
+          buildozer -v --profile ios ios debug 2>&1 | tee ios-build.log
         env:
           IOS_CODESIGN_ALLOWED: "0"
 

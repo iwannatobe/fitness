@@ -66,6 +66,11 @@ def init_db():
             exercise_id TEXT NOT NULL,
             FOREIGN KEY(exercise_id) REFERENCES exercise_catalog(id)
         );
+        CREATE TABLE IF NOT EXISTS exercise_usage (
+            exercise_id TEXT PRIMARY KEY,
+            use_count INTEGER NOT NULL DEFAULT 1,
+            last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
         CREATE TABLE IF NOT EXISTS user_metrics (
             id INTEGER PRIMARY KEY AUTOINCREMENT, record_date DATE UNIQUE, weight_kg REAL NOT NULL
         );

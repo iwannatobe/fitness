@@ -75,7 +75,8 @@ def search_catalog(query="", body_part="", limit=100, common_only=False):
     conditions = ["enabled = 1"]
     values = []
     if common_only:
-        conditions.append("is_common = 1")
+        # 常用 = 用户通过模板训练完成过的动作，按最近使用排序
+        conditions.append("id IN (SELECT exercise_id FROM exercise_usage)")
     if query:
         conditions.append("(name_zh LIKE ? OR name_en LIKE ? OR equipment LIKE ? OR target LIKE ?)")
         like = f"%{query.strip()}%"
@@ -84,11 +85,29 @@ def search_catalog(query="", body_part="", limit=100, common_only=False):
         conditions.append("body_part = ?")
         values.append(body_part)
     values.append(limit)
+    order = ("CASE WHEN id IN (SELECT exercise_id FROM exercise_usage) THEN 0 ELSE 1 END, "
+             "(SELECT last_used_at FROM exercise_usage WHERE exercise_id = id) DESC, "
+             "body_part, name_zh")
     rows = conn.execute(
         "SELECT * FROM exercise_catalog WHERE " + " AND ".join(conditions)
-        + " ORDER BY is_common DESC, body_part, name_zh LIMIT ?", values).fetchall()
+        + " ORDER BY " + order + " LIMIT ?", values).fetchall()
     conn.close()
     return [_row_to_dict(row) for row in rows]
+
+
+def record_exercise_used(exercise_id):
+    """Increment the usage counter for a completed catalog exercise."""
+    if not exercise_id:
+        return
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO exercise_usage (exercise_id, use_count) VALUES (?, 1) "
+        "ON CONFLICT(exercise_id) DO UPDATE SET "
+        "use_count = use_count + 1, last_used_at = CURRENT_TIMESTAMP",
+        (exercise_id,),
+    )
+    conn.commit()
+    conn.close()
 
 
 def get_catalog_exercise(exercise_id):

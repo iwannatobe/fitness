@@ -202,7 +202,12 @@ class ArchivePanel(BoxLayout):
         for ex in rows:
             self._grid.add_widget(ArchiveCard(ex))
         if not rows:
-            empty = Label(text="NO ENTRIES / 无匹配动作", color=theme.TEXT_MUTED,
+            if self._active_filter == "common":
+                msg = ("COMMON EMPTY / 暂无常用动作\n"
+                       "完成模板训练后，用过的动作会自动出现在这里")
+            else:
+                msg = "NO ENTRIES / 无匹配动作"
+            empty = Label(text=msg, color=theme.TEXT_MUTED,
                           font_size=dp(theme.FONT_BODY), size_hint_y=None,
                           height=dp(160), halign="center", valign="middle")
             self._grid.add_widget(empty)

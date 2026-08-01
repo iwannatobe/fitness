@@ -25,8 +25,20 @@ def get_today_plan():
 
 def complete_plan_item(plan_id):
     conn = get_db()
+    row = conn.execute(
+        "SELECT exercise_name, exercise_id FROM daily_plan WHERE id = ? AND completed = 0",
+        (plan_id,)).fetchone()
     conn.execute("UPDATE daily_plan SET completed = 1 WHERE id = ?", (plan_id,))
     conn.commit(); conn.close()
+    if row:
+        exercise_id = row["exercise_id"]
+        if not exercise_id:
+            from models.catalog_model import find_catalog_exercise
+            matched = find_catalog_exercise(None, row["exercise_name"])
+            exercise_id = matched["id"] if matched else None
+        if exercise_id:
+            from models.catalog_model import record_exercise_used
+            record_exercise_used(exercise_id)
     from models.training_session_model import finish_today_training_session_if_complete
     finish_today_training_session_if_complete()
 

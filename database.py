@@ -11,6 +11,7 @@ from models.training_session_model import (
 )
 from models.catalog_model import (
     find_catalog_exercise, get_catalog_exercise, resolve_media_path, search_catalog,
+    record_exercise_used,
 )
 from models.template_model import add_template, get_templates, delete_template, update_template
 from models.metrics_model import get_user_weight, set_user_weight, calc_strength_calories, calc_cardio_calories

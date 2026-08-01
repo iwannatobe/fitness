@@ -38,20 +38,21 @@ jobs:
           toolchain build python3 kivy 2>&1 | tee "$LOG"
           toolchain create FitnessTracker /Users/runner/work/fitness/fitness 2>&1 | tee -a "$LOG"
           ls -la
-          # toolchain lowercases the title: fitnesstracker-ios/fitnesstracker.xcodeproj
           find . -name "*.xcodeproj" -maxdepth 4 -print
           APP_PROJ=$(find . -name "*.xcodeproj" -maxdepth 4 | head -1)
           echo "PROJECT=$APP_PROJ"
+          # device (iphoneos) build; unsigned .app for later signing
           xcodebuild -project "$APP_PROJ" \
             -scheme fitnesstracker \
             -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
+            -sdk iphoneos \
+            -arch arm64 \
             CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
             build 2>&1 | tee -a "$LOG"
           cd /Users/runner/work/fitness/fitness
-          find . -name "*.app" -maxdepth 12 -print
-          find . -name "*.app" -maxdepth 12 | tee "$GITHUB_WORKSPACE/app_paths.txt"
+          find . -name "*.app" -maxdepth 12 -not -path "*IDLE*" -print
+          find . -name "*.app" -maxdepth 12 -not -path "*IDLE*" | tee "$GITHUB_WORKSPACE/app_paths.txt"
 
       - name: Collect artifacts
         if: always()

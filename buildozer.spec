@@ -39,6 +39,13 @@ ios.codesign.allowed = false
 log_level = 1
 storage_dir = /home/skaven/buildozer_build
 
+[app@ios]
+
+# kivy-ios 需要较新的 Kivy（>=2.2 修复新 Xcode GL 兼容），Android 仍用 2.1.0
+requirements = python3,kivy==2.3.1,httpx,httpcore,h11,anyio,sniffio,certifi,typing_extensions,idna
+osx.kivy_version = 2.3.1
+storage_dir = /Users/runner/.buildozer
+
 [buildozer]
 log_level = 2
 warn_on_root = 1

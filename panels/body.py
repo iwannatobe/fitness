@@ -123,6 +123,7 @@ class BodyPanel(BoxLayout):
 
     def _build_form(self):
         grid = GridLayout(cols=2, size_hint_y=None, spacing=(dp(8), dp(6)))
+        grid.bind(minimum_height=grid.setter("height"))
         grid.add_widget(self._field_row("体重", "weight", "kg"))
         grid.add_widget(self._field_row("体脂率", "body_fat", "%"))
         grid.add_widget(self._field_row("胸围", "chest", "cm"))

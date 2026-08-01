@@ -6,6 +6,19 @@
 
 <p align="center">
   <img src="screenshots/screenshot_home.png" width="200" alt="Home">
+  <img src="screenshots/screenshot_archive.png" width="200" alt="力量资料馆">
+  <img src="screenshots/screenshot_archive_common.png" width="200" alt="常用动作">
+  <img src="screenshots/screenshot_cardio.png" width="200" alt="有氧·热身·拉伸">
+</p>
+<p align="center">
+  <img src="screenshots/screenshot_body.png" width="200" alt="身体数据">
+  <img src="screenshots/screenshot_deploy.png" width="200" alt="部署任务">
+  <img src="screenshots/screenshot_detail.png" width="200" alt="日期详情">
+  <img src="screenshots/screenshot_guidance.png" width="200" alt="动作讲解">
+</p>
+<p align="center">
+  <img src="screenshots/screenshot_stats.png" width="200" alt="统计数据">
+  <img src="screenshots/screenshot_ai.png" width="200" alt="AI 助手">
 </p>
 
 ## 功能

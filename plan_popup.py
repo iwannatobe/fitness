@@ -15,6 +15,23 @@ from panels.cardio import CARDIO_PRESETS
 from panels.preset_grid import EXERCISE_ICONS, EXERCISE_COLORS, _rgba_hex
 from config.constants import TEMPLATE_ICONS, TEMPLATE_COLORS, get_default_rest_seconds
 
+# 每个模板自动附带的练前热身 / 练后拉伸（按模板类型匹配；item 为目录动作名）
+_TEMPLATE_WARMUP = {
+    "推": ["踝关节环绕", "跪姿平板触肩", "俯卧撑转体侧平板"],
+    "拉": ["踝关节环绕", "蜘蛛爬俯卧撑", "桥式登山者"],
+    "腿": ["踝关节环绕", "徒手深蹲", "跳跃深蹲"],
+    "default": ["踝关节环绕", "平板支撑"],
+}
+_TEMPLATE_STRETCH = {
+    "推": ["胸肩拉伸", "三头肌拉伸", "后束三角肌拉伸"],
+    "拉": ["健身球背阔肌拉伸", "上背部拉伸", "站姿侧向拉伸"],
+    "腿": ["腘绳肌拉伸", "侧卧股四头肌拉伸", "站姿小腿拉伸"],
+    "default": ["世界最伟大拉伸", "腘绳肌拉伸"],
+}
+_WARMUP_COLOR = theme.VFD_CYAN
+_STRETCH_COLOR = theme.VFD_BLUE
+_PHASE_LABEL = {"warmup": "热身", "stretch": "拉伸"}
+
 class _WheelLabel(Label):
     def __init__(self, plan_popup, idx, key, min_val, max_val, signed=False, step=1, **kwargs):
         super().__init__(**kwargs)
@@ -251,7 +268,33 @@ class PlanPopup(FloatLayout):
         name = info["name"]
         self._current_tmpl_id = self._tmpl_id[name]
         self._selected = copy.deepcopy(self._tmpl_items[name])
+        self._attach_template_phases(name)
         self._refresh_selected()
+
+    def _template_key(self, name):
+        if "推" in name:
+            return "推"
+        if "拉" in name:
+            return "拉"
+        if "腿" in name or "蹲" in name or "硬拉" in name:
+            return "腿"
+        return "default"
+
+    def _phase_items(self, names, phase):
+        items = []
+        for n in names:
+            ex = db.find_catalog_exercise(None, n)
+            item = {"type": "cardio", "name": n, "phase": phase,
+                    "distance": 0, "duration": 3,
+                    "exercise_id": ex["id"] if ex else None}
+            items.append(item)
+        return items
+
+    def _attach_template_phases(self, name):
+        key = self._template_key(name)
+        warmup = self._phase_items(_TEMPLATE_WARMUP.get(key, _TEMPLATE_WARMUP["default"]), "warmup")
+        stretch = self._phase_items(_TEMPLATE_STRETCH.get(key, _TEMPLATE_STRETCH["default"]), "stretch")
+        self._selected = warmup + self._selected + stretch
 
     def _refresh_selected(self):
         self._selected_box.clear_widgets()
@@ -271,9 +314,19 @@ class PlanPopup(FloatLayout):
         row.bind(pos=redraw, size=redraw)
 
         line1 = BoxLayout(size_hint_y=None, height=dp(28), spacing=dp(4))
-        line1.add_widget(Label(text=item["name"], color=theme.TEXT_PRIMARY,
-                               size_hint_x=0.30, font_size=dp(12), bold=True,
-                               halign="left", valign="middle"))
+        phase = item.get("phase")
+        if phase in _PHASE_LABEL:
+            phase_color = _WARMUP_COLOR if phase == "warmup" else _STRETCH_COLOR
+            tag = Label(text=f"[{_rgba_hex(phase_color)}]{_PHASE_LABEL[phase]}[/]",
+                        markup=True, size_hint_x=None, width=dp(34),
+                        font_size=dp(10), bold=True, halign="left", valign="middle")
+            line1.add_widget(tag)
+        name_label = Label(text=item["name"], color=theme.TEXT_PRIMARY,
+                           size_hint_x=0.30 if phase not in _PHASE_LABEL else 0.22,
+                           font_size=dp(12), bold=True,
+                           halign="left", valign="middle")
+        name_label.bind(size=name_label.setter("text_size"))
+        line1.add_widget(name_label)
         if item.get("type") == "strength":
             line1.add_widget(self._make_stepper(idx, "sets", item.get("sets", 3), 1, 20))
             line1.add_widget(Label(text="组", color=theme.TEXT_MUTED,
@@ -285,12 +338,19 @@ class PlanPopup(FloatLayout):
             line1.add_widget(Label(text="kg", color=theme.TEXT_MUTED,
                                    size_hint_x=0.04, font_size=dp(12)))
         else:
-            line1.add_widget(self._make_stepper(idx, "distance", item.get("distance", 0), 0, 100))
-            line1.add_widget(Label(text="km", color=theme.TEXT_MUTED,
-                                   size_hint_x=0.04, font_size=dp(12)))
-            line1.add_widget(self._make_stepper(idx, "duration", item.get("duration", 30), 1, 300))
-            line1.add_widget(Label(text="min", color=theme.TEXT_MUTED,
-                                   size_hint_x=0.04, font_size=dp(12)))
+            if item.get("phase") in _PHASE_LABEL:
+                # 热身/拉伸只调时长
+                line1.add_widget(Label(text="", size_hint_x=0.06))
+                line1.add_widget(self._make_stepper(idx, "duration", item.get("duration", 3), 1, 30))
+                line1.add_widget(Label(text="min", color=theme.TEXT_MUTED,
+                                       size_hint_x=0.04, font_size=dp(12)))
+            else:
+                line1.add_widget(self._make_stepper(idx, "distance", item.get("distance", 0), 0, 100))
+                line1.add_widget(Label(text="km", color=theme.TEXT_MUTED,
+                                       size_hint_x=0.04, font_size=dp(12)))
+                line1.add_widget(self._make_stepper(idx, "duration", item.get("duration", 30), 1, 300))
+                line1.add_widget(Label(text="min", color=theme.TEXT_MUTED,
+                                       size_hint_x=0.04, font_size=dp(12)))
         del_btn = Button(text="×", size_hint_x=0.08,
                          background_normal="", background_color=(0, 0, 0, 0),
                          color=theme.LED_RED, font_size=dp(14), bold=True)
@@ -404,7 +464,10 @@ class PlanPopup(FloatLayout):
         if self._current_tmpl_id is not None:
             tmpl = next((t for t in db.get_templates() if t["id"] == self._current_tmpl_id), None)
             if tmpl:
-                db.update_template(self._current_tmpl_id, tmpl["name"], self._selected)
+                # 只回写真正的模板项，排除自动附加的热身/拉伸
+                core_items = [item for item in self._selected
+                              if item.get("phase") not in _PHASE_LABEL]
+                db.update_template(self._current_tmpl_id, tmpl["name"], core_items)
         self._on_confirm(self._current_tmpl_id)
         self._dismiss()
 

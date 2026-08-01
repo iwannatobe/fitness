@@ -12,7 +12,7 @@ import database as db
 from config import theme
 import sounds
 
-_FIELD_COLOR = (1.0, 0.72, 0.22, 1)  # 亮橙，填入的字
+_FIELD_COLOR = (0.30, 1.0, 0.55, 1)  # 亮绿，填入的字
 
 
 class BodyPanel(BoxLayout):

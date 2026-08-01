@@ -27,13 +27,28 @@ jobs:
           brew link libtool
           pip install buildozer kivy-ios
 
-      - name: Build iOS app (no codesign, simulator)
+      - name: Build iOS app with kivy-ios toolchain (no codesign, simulator)
         run: |
           export PATH="$PATH:$HOME/.local/bin"
           export PYTHONUNBUFFERED=1
-          buildozer -v --profile ios ios debug 2>&1 | tee ios-build.log
-        env:
-          IOS_CODESIGN_ALLOWED: "0"
+          # install kivy-ios if not present
+          pip install kivy-ios 2>/dev/null || true
+          # prepare a fresh dist dir; build recipes
+          mkdir -p .buildozer/ios/platform/kivy-ios
+          cd .buildozer/ios/platform/kivy-ios
+          toolchain build python3 kivy 2>&1 | tee ../../../ios-build.log
+          toolchain create FitnessTracker /Users/runner/work/fitness/fitness 2>&1 | tee -a ../../../ios-build.log
+          ls -la
+          ls -la FitnessTracker-ios/ 2>/dev/null || true
+          xcodebuild -project FitnessTracker-ios/FitnessTracker.xcodeproj \
+            -scheme FitnessTracker \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee -a ../../../ios-build.log
+          cd /Users/runner/work/fitness/fitness
+          find . -name "*.app" -maxdepth 8 -print
 
       - name: Collect artifacts
         if: always()

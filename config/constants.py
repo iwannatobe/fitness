@@ -1,5 +1,5 @@
 # App-wide constants
-SCREEN_ORDER = ["home", "strength", "cardio", "body", "stats"]
+SCREEN_ORDER = ["home", "archive", "cardio", "body", "stats"]
 DB_FILENAME = "fitness.db"
 DEFAULT_REST_SECONDS = 120
 

@@ -58,7 +58,8 @@ def init_db():
             source_commit TEXT NOT NULL, instructions_polished INTEGER NOT NULL DEFAULT 0,
             animation_frames_json TEXT NOT NULL DEFAULT '[]',
             animation_interval REAL NOT NULL DEFAULT 0.12,
-            enabled INTEGER NOT NULL DEFAULT 1
+            enabled INTEGER NOT NULL DEFAULT 1,
+            is_common INTEGER NOT NULL DEFAULT 1
         );
         CREATE TABLE IF NOT EXISTS exercise_aliases (
             alias TEXT PRIMARY KEY,
@@ -146,6 +147,12 @@ def init_db():
         conn.execute(
             "ALTER TABLE exercise_catalog ADD COLUMN animation_interval "
             "REAL NOT NULL DEFAULT 0.12"
+        )
+        conn.commit()
+    if "is_common" not in catalog_cols:
+        conn.execute(
+            "ALTER TABLE exercise_catalog ADD COLUMN is_common "
+            "INTEGER NOT NULL DEFAULT 1"
         )
         conn.commit()
     conn.execute(

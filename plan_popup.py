@@ -174,6 +174,13 @@ class PlanPopup(FloatLayout):
         presets = list(STRENGTH_PRESETS)
         for name in db.get_custom_exercises("strength"):
             if name not in presets: presets.append(name)
+        # 常用动作资料库直接进快捷网格，方便加入核弹部署
+        for ex in db.search_catalog(body_part="", limit=200, common_only=True):
+            if ex["item_type"] != "strength":
+                continue
+            name = ex["name_zh"]
+            if name not in presets:
+                presets.append(name)
         self._strength_grid = GridLayout(cols=3, size_hint_y=None, spacing=dp(3))
         self._strength_grid.bind(minimum_height=self._strength_grid.setter("height"))
         for name in presets:

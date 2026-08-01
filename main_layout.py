@@ -12,7 +12,7 @@ import theme
 import database as db
 from topbar import TopBar
 from calendar_widget import CalendarHeatmap
-from panels import StrengthPanel, CardioPanel, BodyPanel, StatsPanel
+from panels import ArchivePanel, CardioPanel, BodyPanel, StatsPanel
 from nuke_button import NukeButton
 from nuke_effects import shake_widget, flash_screen, explode_particles
 from battle_report import show_battle_report
@@ -99,11 +99,11 @@ class MainLayout(FloatLayout):
 
     def init_ui(self):
         self.sm = ScreenManager(transition=SlideTransition(duration=0.18))
-        self._screen_order = ["home", "strength", "cardio", "body", "stats", "ai"]
+        self._screen_order = ["home", "archive", "cardio", "body", "stats", "ai"]
 
         screens = [
             ("home", "CALENDAR\n日历", self._build_home),
-            ("strength", "STRENGTH\n力量训练", self._build_strength),
+            ("archive", "ARCHIVE\n资料馆", self._build_archive),
             ("cardio", "CARDIO\n有氧运动", self._build_cardio),
             ("body", "BODY DATA\n身体数据", self._build_body),
             ("stats", "STATISTICS\n统计数据", self._build_stats),
@@ -185,9 +185,9 @@ class MainLayout(FloatLayout):
         self._home_status_bg.size = widget.size
         self._home_status_line.rectangle = (*widget.pos, *widget.size)
 
-    def _build_strength(self):
-        self._strength_panel = StrengthPanel(self)
-        return self._strength_panel
+    def _build_archive(self):
+        self._archive_panel = ArchivePanel(self)
+        return self._archive_panel
     def _build_cardio(self):
         self._cardio_panel = CardioPanel(self)
         return self._cardio_panel
@@ -216,7 +216,7 @@ class MainLayout(FloatLayout):
     def _on_task_completed(self):
         self.refresh_heatmap()
         if hasattr(self, "_task_card"): self._task_card.refresh()
-        if hasattr(self, "_strength_panel"): self._strength_panel._refresh_list()
+        if hasattr(self, "_archive_panel"): self._archive_panel._refresh()
         if hasattr(self, "_cardio_panel"): self._cardio_panel._refresh_list()
         plan = db.get_today_plan()
         if plan and all(item["completed"] for item in plan):

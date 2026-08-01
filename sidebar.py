@@ -11,7 +11,7 @@ import sounds
 
 _MENU = [
     ("CALENDAR\n日历", "home", "\u25cf"),
-    ("STRENGTH\n力量训练", "strength", "\u25b2"),
+    ("ARCHIVE\n资料馆", "archive", "\u25b2"),
     ("CARDIO\n有氧运动", "cardio", "\u266b"),
     ("BODY DATA\n身体数据", "body", "\u2605"),
     ("STATISTICS\n统计数据", "stats", "\u25c6"),

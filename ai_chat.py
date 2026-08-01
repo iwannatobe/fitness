@@ -1433,6 +1433,7 @@ class AIChatPanel(BoxLayout):
                 # 匹配已有动作资料库条目，关联 GIF 和指导步骤
                 catalog_exercise = db.find_catalog_exercise(None, exercise_name)
                 exercise_id = catalog_exercise["id"] if catalog_exercise else None
+                from config.constants import get_default_rest_seconds
                 db.add_plan_item(
                     item_type=item_type, exercise_name=exercise_name,
                     target_sets=args.get("sets"), target_reps=args.get("reps"),
@@ -1441,6 +1442,7 @@ class AIChatPanel(BoxLayout):
                     target_rep_step=args.get("rep_step", 0),
                     target_distance=args.get("distance"),
                     target_duration=args.get("duration"),
+                    target_rest_seconds=get_default_rest_seconds(exercise_name),
                     exercise_id=exercise_id)
                 self._plan_changed = True
                 catalog_msg = "，已关联动作指导" if catalog_exercise else ""
@@ -1523,14 +1525,15 @@ class AIChatPanel(BoxLayout):
                 return json.dumps(db.get_date_overview(args["date"]), ensure_ascii=False, default=str)
             if name == "search_catalog":
                 results = db.search_catalog(query=args.get("query", ""),
-                                           body_part=args.get("body_part", ""),
-                                           limit=12)
+                                            body_part=args.get("body_part", ""),
+                                            limit=12)
                 summary = [{
                     "name": e["name_zh"],
                     "name_en": e["name_en"],
                     "body_part": e["body_part"],
                     "equipment": e["equipment"],
                     "has_animation": len(e.get("animation_frames", [])) > 0,
+                    "common": bool(e.get("is_common", 1)),
                 } for e in results]
                 return json.dumps(summary, ensure_ascii=False)
             return f"error: 未知工具 {name}"
@@ -1672,8 +1675,8 @@ class AIChatPanel(BoxLayout):
                     ml._task_card.refresh()
                 if hasattr(ml, "_warmup"):
                     ml._warmup.refresh()
-                if hasattr(ml, "_strength_panel"):
-                    ml._strength_panel._refresh_list()
+                if hasattr(ml, "_archive_panel"):
+                    ml._archive_panel._refresh()
                 if hasattr(ml, "_cardio_panel"):
                     ml._cardio_panel._refresh_list()
             except Exception:

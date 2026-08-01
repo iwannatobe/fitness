@@ -30,8 +30,8 @@ def sync_catalog():
             target, muscle_group, secondary_muscles_json, instructions_zh,
             instruction_steps_zh_json, thumbnail_path, gif_path, attribution,
             source_commit, instructions_polished, enabled
-            , animation_frames_json, animation_interval
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            , animation_frames_json, animation_interval, is_common
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             source_id=excluded.source_id, name_zh=excluded.name_zh,
             name_en=excluded.name_en, item_type=excluded.item_type,
@@ -45,7 +45,7 @@ def sync_catalog():
             instructions_polished=excluded.instructions_polished,
             animation_frames_json=excluded.animation_frames_json,
             animation_interval=excluded.animation_interval,
-            enabled=excluded.enabled
+            enabled=excluded.enabled, is_common=excluded.is_common
     """, [(
         row["id"], row["source_id"], row["name_zh"], row["name_en"],
         row["item_type"], row["body_part"], row["equipment"], row["target"],
@@ -56,6 +56,7 @@ def sync_catalog():
         row["enabled"],
         row["animation_frames_json"] if "animation_frames_json" in row.keys() else "[]",
         row["animation_interval"] if "animation_interval" in row.keys() else 0.12,
+        row["is_common"] if "is_common" in row.keys() else 1,
     ) for row in rows])
     # Aliases are packaged catalog metadata, not user data. Rebuild them so
     # stale mappings from older app versions cannot point at removed rows.
@@ -69,10 +70,12 @@ def sync_catalog():
     conn.close()
 
 
-def search_catalog(query="", body_part="", limit=100):
+def search_catalog(query="", body_part="", limit=100, common_only=False):
     conn = get_db()
     conditions = ["enabled = 1"]
     values = []
+    if common_only:
+        conditions.append("is_common = 1")
     if query:
         conditions.append("(name_zh LIKE ? OR name_en LIKE ? OR equipment LIKE ? OR target LIKE ?)")
         like = f"%{query.strip()}%"
@@ -83,7 +86,7 @@ def search_catalog(query="", body_part="", limit=100):
     values.append(limit)
     rows = conn.execute(
         "SELECT * FROM exercise_catalog WHERE " + " AND ".join(conditions)
-        + " ORDER BY body_part, name_zh LIMIT ?", values).fetchall()
+        + " ORDER BY is_common DESC, body_part, name_zh LIMIT ?", values).fetchall()
     conn.close()
     return [_row_to_dict(row) for row in rows]
 

@@ -47,6 +47,7 @@ jobs:
             -configuration Debug \
             -sdk iphoneos \
             -arch arm64 \
+            -jobs 1 \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             build 2>&1 | tee -a "$LOG"

@@ -76,12 +76,19 @@ class BodyPanel(BoxLayout):
             hint_text_color=(0.55, 0.57, 0.56, 1),
             padding=(dp(8), dp(8)),
         )
+        # Kivy 2.3.1：TextInput 文字 Rectangle 不自带 Color，继承全局 GL 状态
+        # 在 MainLayout 中会被污染成灰色。这里在 canvas.before 注入前景色，
+        # 让文字绘制使用绿色（_update_graphics 只 clear 主体 canvas，不清 before）。
+        with inp.canvas.before:
+            Color(*_FIELD_COLOR)
         self._frame_input(inp)
         return inp
 
     @staticmethod
     def _frame_input(inp):
-        with inp.canvas.before:
+        # 注意：边框必须画在 canvas.after —— Kivy 2.3.1 中 canvas.before
+        # 添加指令会破坏 TextInput 的文字纹理渲染（文字变灰）。
+        with inp.canvas.after:
             Color(*theme.BORDER)
             inp._edge = Line(rectangle=(0, 0, 0, 0), width=dp(1))
             Color(*theme.GLASS_HIGHLIGHT)

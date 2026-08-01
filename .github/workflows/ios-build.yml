@@ -1,0 +1,60 @@
+name: iOS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "App version"
+        required: false
+        default: "2.1"
+
+jobs:
+  ios-build:
+    runs-on: macos-14
+    timeout-minutes: 240
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system deps
+        run: |
+          brew install autoconf automake libtool pkg-config
+          brew link libtool
+          pip install buildozer kivy-ios
+
+      - name: Build iOS app (no codesign, simulator)
+        run: |
+          export PATH="$PATH:$HOME/.local/bin"
+          buildozer ios debug
+        env:
+          IOS_CODESIGN_ALLOWED: "0"
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          # buildozer ios debug outputs under .buildozer/ios/platform/.../*.app
+          find . -name "*.app" -maxdepth 6 -print
+          find . -name "*.ipa" -maxdepth 6 -print
+
+      - name: Upload .app bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitnessapp-ios-simulator
+          path: |
+            **/*.app
+          if-no-files-found: warn
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: |
+            **/buildozer*.log
+            **/ios-*.log
+          if-no-files-found: allow

@@ -39,7 +39,7 @@ class ArchiveCard(Widget):
     """Tappable exercise tile showing thumbnail + name, opens the detail popup."""
 
     def __init__(self, exercise, **kwargs):
-        super().__init__(size_hint=(None, None), size=(dp(150), dp(150)), **kwargs)
+        super().__init__(size_hint=(1, None), height=dp(132), **kwargs)
         self._exercise = exercise
         self._pressed = False
         with self.canvas:
@@ -55,13 +55,12 @@ class ArchiveCard(Widget):
 
         thumb_path = db.resolve_media_path(exercise.get("thumbnail_path"))
         if thumb_path:
-            img = Image(source=thumb_path, allow_stretch=True, keep_ratio=True,
-                        size_hint_y=None, height=dp(104))
+            img = Image(source=thumb_path, allow_stretch=True, keep_ratio=True)
             self._img = img
             box.add_widget(img)
         else:
             self._img = None
-            box.add_widget(Widget(size_hint_y=None, height=dp(104)))
+            box.add_widget(Widget())
 
         name = Label(text=exercise["name_zh"], color=theme.TEXT_PRIMARY,
                      font_size=dp(11), bold=True, halign="left", valign="middle",
@@ -155,17 +154,13 @@ class ArchivePanel(BoxLayout):
 
         scroll = ScrollView(do_scroll_x=False)
         self._scroll = scroll
-        grid = GridLayout(cols=2, spacing=dp(8), size_hint=(None, None), padding=[dp(2), dp(2)])
+        grid = GridLayout(cols=3, spacing=dp(6), size_hint=(1, None), padding=[dp(2), dp(2)])
         self._grid = grid
         grid.bind(minimum_height=grid.setter("height"))
-        scroll.bind(width=self._sync_grid_width)
         scroll.add_widget(grid)
         self.add_widget(scroll)
 
         self._refresh()
-
-    def _sync_grid_width(self, scroll, width):
-        self._grid.width = width
 
     def _make_filter_btn(self, label, value):
         from kivy.uix.button import Button

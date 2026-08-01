@@ -64,18 +64,25 @@ jobs:
       - name: Collect artifacts
         if: always()
         run: |
-          echo "=== app_paths ==="
-          cat app_paths.txt 2>/dev/null || echo "no app_paths.txt"
-          echo "=== bin ==="
-          ls -la bin/ 2>/dev/null || true
+          echo "=== find .app in DerivedData ==="
+          find "$HOME/Library/Developer/Xcode/DerivedData" -name "*.app" -maxdepth 6 -print 2>/dev/null
+          mkdir -p artifacts
+          APP=$(find "$HOME/Library/Developer/Xcode/DerivedData" -name "*.app" -maxdepth 6 -type d 2>/dev/null | head -1)
+          if [ -n "$APP" ]; then
+            cp -R "$APP" artifacts/
+            ls -la artifacts/
+            echo "$APP" > app_paths.txt
+          else
+            echo "no .app found"
+          fi
 
       - name: Upload .app bundle
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: fitnessapp-ios-simulator
+          name: fitnessapp-ios-device
           path: |
-            **/*.app
+            artifacts/
           if-no-files-found: warn
 
       - name: Upload build log

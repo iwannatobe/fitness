@@ -70,7 +70,8 @@ def sync_catalog():
     conn.close()
 
 
-def search_catalog(query="", body_part="", limit=100, common_only=False):
+def search_catalog(query="", body_part="", limit=100, common_only=False,
+                   item_type=None, item_types=None):
     conn = get_db()
     conditions = ["enabled = 1"]
     values = []
@@ -81,6 +82,12 @@ def search_catalog(query="", body_part="", limit=100, common_only=False):
         conditions.append("(name_zh LIKE ? OR name_en LIKE ? OR equipment LIKE ? OR target LIKE ?)")
         like = f"%{query.strip()}%"
         values.extend([like, like, like, like])
+    if item_type:
+        conditions.append("item_type = ?")
+        values.append(item_type)
+    if item_types:
+        conditions.append("item_type IN (%s)" % ",".join("?" * len(item_types)))
+        values.extend(item_types)
     if body_part:
         conditions.append("body_part = ?")
         values.append(body_part)

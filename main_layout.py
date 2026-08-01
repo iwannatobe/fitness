@@ -12,7 +12,8 @@ import theme
 import database as db
 from topbar import TopBar
 from calendar_widget import CalendarHeatmap
-from panels import ArchivePanel, CardioPanel, BodyPanel, StatsPanel
+from panels import ArchivePanel, BodyPanel, StatsPanel
+from panels.archive import _CATEGORY_FILTERS
 from nuke_button import NukeButton
 from nuke_effects import shake_widget, flash_screen, explode_particles
 from battle_report import show_battle_report
@@ -189,7 +190,12 @@ class MainLayout(FloatLayout):
         self._archive_panel = ArchivePanel(self)
         return self._archive_panel
     def _build_cardio(self):
-        self._cardio_panel = CardioPanel(self)
+        self._cardio_panel = ArchivePanel(
+            self,
+            item_types=["cardio", "warmup", "stretch"],
+            filters=_CATEGORY_FILTERS,
+            title="CARDIO / 有氧 · 热身 · 拉伸",
+        )
         return self._cardio_panel
     def _build_body(self): return BodyPanel(self)
     def _build_stats(self): return StatsPanel()
@@ -217,7 +223,7 @@ class MainLayout(FloatLayout):
         self.refresh_heatmap()
         if hasattr(self, "_task_card"): self._task_card.refresh()
         if hasattr(self, "_archive_panel"): self._archive_panel._refresh()
-        if hasattr(self, "_cardio_panel"): self._cardio_panel._refresh_list()
+        if hasattr(self, "_cardio_panel"): self._cardio_panel._refresh()
         plan = db.get_today_plan()
         if plan and all(item["completed"] for item in plan):
             Clock.schedule_once(lambda _dt: show_battle_report(self), 0.35)

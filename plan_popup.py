@@ -187,11 +187,15 @@ class PlanPopup(FloatLayout):
             self._strength_grid.add_widget(self._make_exercise_btn(name, "strength"))
         ex_box.add_widget(self._strength_grid)
 
-        ex_box.add_widget(Label(text="CARDIO INPUT / 有氧运动", color=theme.VFD_CYAN,
+        ex_box.add_widget(Label(text="CARDIO INPUT / 有氧·热身·拉伸", color=theme.VFD_CYAN,
                                 font_size=dp(12), size_hint_y=None, height=dp(18)))
         presets = list(CARDIO_PRESETS)
         for name in db.get_custom_exercises("cardio"):
             if name not in presets: presets.append(name)
+        for ex in db.search_catalog(limit=500, item_types=["cardio", "warmup", "stretch"]):
+            name = ex["name_zh"]
+            if name not in presets:
+                presets.append(name)
         self._cardio_grid = GridLayout(cols=3, size_hint_y=None, spacing=dp(3))
         self._cardio_grid.bind(minimum_height=self._cardio_grid.setter("height"))
         for name in presets:

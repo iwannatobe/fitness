@@ -1678,7 +1678,7 @@ class AIChatPanel(BoxLayout):
                 if hasattr(ml, "_archive_panel"):
                     ml._archive_panel._refresh()
                 if hasattr(ml, "_cardio_panel"):
-                    ml._cardio_panel._refresh_list()
+                    ml._cardio_panel._refresh()
             except Exception:
                 pass
         if ok:

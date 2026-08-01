@@ -28,6 +28,14 @@ _BODY_FILTERS = [
     ("waist", "核心"),
 ]
 
+_CATEGORY_FILTERS = [
+    ("", "全部"),
+    ("common", "常用"),
+    ("cardio", "有氧"),
+    ("warmup", "热身"),
+    ("stretch", "拉伸"),
+]
+
 _EQUIPMENT_LABELS = {
     "barbell": "杠铃", "dumbbell": "哑铃", "cable": "绳索",
     "body weight": "自重", "leverage machine": "器械",
@@ -108,17 +116,20 @@ class ArchiveCard(Widget):
 
 
 class ArchivePanel(BoxLayout):
-    """Full-page exercise reference library with body-part filter and search."""
+    """Full-page exercise reference library with body-part/category filters."""
 
-    def __init__(self, main_layout, **kwargs):
+    def __init__(self, main_layout, item_types=None, filters=None, title=None, **kwargs):
         super().__init__(orientation="vertical", spacing=dp(8),
                          padding=[dp(theme.PAGE_MARGIN)] * 4, **kwargs)
         self.main_layout = main_layout
+        self._item_types = item_types or ["strength"]
+        self._filters = filters or _BODY_FILTERS
         self._active_filter = ""
         self._search_ev = None
 
         header = BoxLayout(size_hint_y=None, height=dp(26))
-        title = Label(text="[color=ff9d24][b]EXERCISE ARCHIVE[/b][/color]  动作资料馆",
+        title_text = title or "EXERCISE ARCHIVE / 动作资料馆"
+        title = Label(text=f"[color=ff9d24][b]{title_text}[/b][/color]",
                       markup=True, color=theme.TEXT_PRIMARY,
                       font_size=dp(theme.FONT_H3), bold=True,
                       halign="left", valign="middle", size_hint_x=1)
@@ -146,7 +157,7 @@ class ArchivePanel(BoxLayout):
 
         filter_bar = BoxLayout(size_hint_y=None, height=dp(34), spacing=dp(4))
         self._filter_btns = {}
-        for value, label in _BODY_FILTERS:
+        for value, label in self._filters:
             btn = self._make_filter_btn(label, value)
             self._filter_btns[value] = btn
             filter_bar.add_widget(btn)
@@ -194,9 +205,23 @@ class ArchivePanel(BoxLayout):
     def _refresh(self):
         query = self._search.text.strip()
         common_only = self._active_filter == "common"
-        body_part = "" if common_only else self._active_filter
+        is_category = self._filters is _CATEGORY_FILTERS
+        if common_only:
+            item_type = None
+            item_types = None
+        elif is_category and self._active_filter:
+            item_type = self._active_filter
+            item_types = None
+        else:
+            item_type = None
+            item_types = self._item_types
+        body_part = "" if (common_only or (is_category and self._active_filter)) \
+            else (self._active_filter if self._active_filter else "")
+        if is_category and not self._active_filter:
+            body_part = ""
         rows = db.search_catalog(query=query, body_part=body_part,
-                                 limit=500, common_only=common_only)
+                                 limit=500, common_only=common_only,
+                                 item_type=item_type, item_types=item_types)
         self._count.text = f"{len(rows)} ITEMS"
         self._grid.clear_widgets()
         for ex in rows:

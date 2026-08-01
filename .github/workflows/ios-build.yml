@@ -27,27 +27,33 @@ jobs:
           brew link libtool
           pip install buildozer kivy-ios
 
-      - name: Build iOS app with kivy-ios toolchain (no codesign, simulator)
+      - name: Build iOS app with kivy-ios toolchain (no codesign, device)
         run: |
           export PATH="$PATH:$HOME/.local/bin"
           export PYTHONUNBUFFERED=1
           LOG="$GITHUB_WORKSPACE/ios-build.log"
           pip install kivy-ios 2>/dev/null || true
+          # stage a clean app dir (exclude .git / build junk to avoid rsync vanished-files)
+          mkdir -p ios_app
+          rsync -a --exclude='.git' --exclude='.buildozer' --exclude='bin' \
+            --exclude='test_images' --exclude='tools' --exclude='ui参考文件' \
+            --exclude='screenshots' --exclude='__pycache__' --exclude='.venv*' \
+            --exclude='fitness.db' --exclude='assets/catalog/gifs' \
+            /Users/runner/work/fitness/fitness/ ios_app/
+          ls ios_app | head -30
           mkdir -p .buildozer/ios/platform/kivy-ios
           cd .buildozer/ios/platform/kivy-ios
           toolchain build python3 kivy 2>&1 | tee "$LOG"
-          toolchain create FitnessTracker /Users/runner/work/fitness/fitness 2>&1 | tee -a "$LOG"
+          toolchain create FitnessTracker /Users/runner/work/fitness/fitness/ios_app 2>&1 | tee -a "$LOG"
           ls -la
           find . -name "*.xcodeproj" -maxdepth 4 -print
           APP_PROJ=$(find . -name "*.xcodeproj" -maxdepth 4 | head -1)
           echo "PROJECT=$APP_PROJ"
-          # device (iphoneos) build; unsigned .app for later signing
           xcodebuild -project "$APP_PROJ" \
             -scheme fitnesstracker \
             -configuration Debug \
             -sdk iphoneos \
             -arch arm64 \
-            -jobs 1 \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             build 2>&1 | tee -a "$LOG"

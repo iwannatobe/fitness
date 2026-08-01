@@ -32,9 +32,33 @@ class BodyPanel(BoxLayout):
             self._chassis = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._sync_chassis, size=self._sync_chassis)
 
+        # 内容容器：固定高度内容自然堆叠，下面用弹性占位区把表单顶到顶部
+        self._content = BoxLayout(orientation="vertical", size_hint_y=None,
+                                  spacing=dp(8))
+        self._content.bind(minimum_height=self._content.setter("height"))
+        self.add_widget(self._content)
+
         self._build_header()
         self._build_form()
         self._prefill()
+
+        self._placeholder = BoxLayout(size_hint_y=1)
+        with self._placeholder.canvas.before:
+            Color(*theme.DISPLAY_GLASS)
+            self._ph_bg = Rectangle(pos=self._placeholder.pos, size=self._placeholder.size)
+            Color(*theme.BORDER_DIM)
+            self._ph_border = Line(rectangle=(0, 0, 0, 0), width=dp(1))
+        self._placeholder.bind(
+            pos=lambda w, _: (setattr(self._ph_bg, "pos", w.pos),
+                              setattr(self._ph_border, "rectangle", (*w.pos, w.width, w.height))),
+            size=lambda w, _: (setattr(self._ph_bg, "size", w.size),
+                               setattr(self._ph_border, "rectangle", (*w.pos, w.width, w.height))))
+        ph_label = Label(text="RESERVED / 预留功能区",
+                         color=theme.TEXT_MUTED, font_size=dp(theme.FONT_CAPTION),
+                         halign="center", valign="middle")
+        ph_label.bind(size=ph_label.setter("text_size"))
+        self._placeholder.add_widget(ph_label)
+        self.add_widget(self._placeholder)
 
     def _sync_chassis(self, *_):
         self._chassis.pos = self.pos
@@ -100,7 +124,7 @@ class BodyPanel(BoxLayout):
                             halign="right", valign="middle", size_hint_x=None, width=dp(90))
         self._saved.bind(size=self._saved.setter("text_size"))
         header.add_widget(self._saved)
-        self.add_widget(header)
+        self._content.add_widget(header)
 
     def _build_form(self):
         grid = GridLayout(cols=2, size_hint_y=None, spacing=(dp(8), dp(6)))
@@ -110,7 +134,7 @@ class BodyPanel(BoxLayout):
         grid.add_widget(self._field_row("胸围", "chest", "cm"))
         grid.add_widget(self._field_row("腰围", "waist", "cm"))
         grid.add_widget(self._field_row("臂围", "arm", "cm"))
-        self.add_widget(grid)
+        self._content.add_widget(grid)
 
         notes = self._make_input(is_float=False)
         self._input_refs["notes"] = notes
@@ -121,20 +145,20 @@ class BodyPanel(BoxLayout):
         n_lbl.bind(size=n_lbl.setter("text_size"))
         notes_box.add_widget(n_lbl)
         notes_box.add_widget(notes)
-        self.add_widget(notes_box)
+        self._content.add_widget(notes_box)
 
         save_btn = Button(text="SAVE / 保存", size_hint_y=None, height=dp(44),
                           background_normal="", background_color=theme.VFD_ORANGE,
                           color=theme.CHASSIS, font_size=dp(theme.FONT_H3), bold=True)
         save_btn.bind(on_release=lambda _: self._save())
         sounds.bind_feedback(save_btn, bg_color=theme.VFD_ORANGE)
-        self.add_widget(save_btn)
+        self._content.add_widget(save_btn)
 
         hint = Label(text="身体数据只保留最新一次，保存后覆盖更新",
                      color=theme.TEXT_MUTED, font_size=dp(theme.FONT_CAPTION),
                      size_hint_y=None, height=dp(18), halign="center", valign="middle")
         hint.bind(size=hint.setter("text_size"))
-        self.add_widget(hint)
+        self._content.add_widget(hint)
 
     def _prefill(self):
         latest = db.get_latest_body()

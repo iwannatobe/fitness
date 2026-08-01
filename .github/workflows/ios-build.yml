@@ -31,13 +31,12 @@ jobs:
         run: |
           export PATH="$PATH:$HOME/.local/bin"
           export PYTHONUNBUFFERED=1
-          # install kivy-ios if not present
+          LOG="$GITHUB_WORKSPACE/ios-build.log"
           pip install kivy-ios 2>/dev/null || true
-          # prepare a fresh dist dir; build recipes
           mkdir -p .buildozer/ios/platform/kivy-ios
           cd .buildozer/ios/platform/kivy-ios
-          toolchain build python3 kivy 2>&1 | tee ../../../ios-build.log
-          toolchain create FitnessTracker /Users/runner/work/fitness/fitness 2>&1 | tee -a ../../../ios-build.log
+          toolchain build python3 kivy 2>&1 | tee "$LOG"
+          toolchain create FitnessTracker /Users/runner/work/fitness/fitness 2>&1 | tee -a "$LOG"
           ls -la
           ls -la FitnessTracker-ios/ 2>/dev/null || true
           xcodebuild -project FitnessTracker-ios/FitnessTracker.xcodeproj \
@@ -46,20 +45,27 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            build 2>&1 | tee -a ../../../ios-build.log
+            build 2>&1 | tee -a "$LOG"
           cd /Users/runner/work/fitness/fitness
-          find . -name "*.app" -maxdepth 8 -print
+          find . -name "*.app" -maxdepth 10 -print
+          find . -name "*.app" -maxdepth 10 | tee "$GITHUB_WORKSPACE/app_paths.txt"
 
       - name: Collect artifacts
         if: always()
         run: |
-          mkdir -p artifacts
-          echo "--- .app bundles ---"
-          find . -name "*.app" -maxdepth 8 -print
-          echo "--- ipa ---"
-          find . -name "*.ipa" -maxdepth 8 -print
-          echo "--- bin ---"
+          echo "=== app_paths ==="
+          cat app_paths.txt 2>/dev/null || echo "no app_paths.txt"
+          echo "=== bin ==="
           ls -la bin/ 2>/dev/null || true
+
+      - name: Upload .app bundle
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitnessapp-ios-simulator
+          path: |
+            **/*.app
+          if-no-files-found: warn
 
       - name: Upload build log
         if: always()
@@ -68,4 +74,5 @@ jobs:
           name: ios-build-log
           path: |
             ios-build.log
+            app_paths.txt
           if-no-files-found: warn

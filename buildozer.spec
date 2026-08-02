@@ -8,7 +8,7 @@ source.dir = .
 source.include_exts = py,ttf,wav,atlas,png,jpg,gif,db
 source.exclude_patterns = check_pkg.py,ui参考文件/*,tools/*,test_images/*,assets/catalog/gifs/*
 
-version = 2.1
+version = 2.2.1
 
 icon.filename = assets/icons/icon.png
 presplash.filename = assets/icons/icon.png

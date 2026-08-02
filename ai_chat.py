@@ -1322,7 +1322,7 @@ class AIChatPanel(BoxLayout):
 
     # —— 加餐识图算热量 ——
     def _open_meal_picker(self):
-        if self._client is None:
+        if not self._cfg.is_configured:
             self._render_append(("warn", "请先配置 API Key 并选一个支持识图的模型。"))
             return
 
@@ -1369,6 +1369,7 @@ class AIChatPanel(BoxLayout):
 
         def worker():
             try:
+                self._ensure_client()
                 resp = self._client.chat(messages, max_tokens=4096)
                 ok, payload = True, resp["text"]
             except Exception as e:
@@ -1542,6 +1543,7 @@ class AIChatPanel(BoxLayout):
 
     def _run_with_tools(self, messages):
         """带 tool calling 的多轮调用，返回最终文本。"""
+        self._ensure_client()
         msgs = list(messages)
         last_text = ""
         for i in range(8):
@@ -1583,17 +1585,24 @@ class AIChatPanel(BoxLayout):
             self._rebuild_messages()
         return True
 
-    def _rebuild_messages(self):
-        if self._client is not None:
-            self._client.close()
-            self._client = None
-        if self._cfg.is_configured:
+    def _ensure_client(self):
+        """在后台线程惰性创建 LLMClient（构造 httpx 不应阻塞主线程）。"""
+        if self._client is None:
             self._client = llm_client.LLMClient(
                 api_key=self._cfg.api_key, api_base_url=self._cfg.api_base_url,
                 model=self._cfg.model, temperature=self._cfg.temperature,
                 max_tokens=self._cfg.max_tokens, max_retries=self._cfg.max_retries,
                 retry_base_delay=self._cfg.retry_base_delay, timeout=self._cfg.timeout,
             )
+        return self._client
+
+    def _rebuild_messages(self):
+        if self._client is not None:
+            self._client.close()
+            self._client = None
+        if self._cfg.is_configured:
+            # client 惰性构造（在后台线程 _ensure_client），避免保存配置时
+            # 主线程同步初始化 httpx（Android 上可能卡死）
             self._messages = [{"role": "system", "content": self._cfg.system_prompt}]
             self._status_dot.color = theme.LED_GREEN
             self._status_lbl.text = "DATA LINK / 已连接  " + self._cfg.model
@@ -1675,10 +1684,7 @@ class AIChatPanel(BoxLayout):
                     ml._task_card.refresh()
                 if hasattr(ml, "_warmup"):
                     ml._warmup.refresh()
-                if hasattr(ml, "_archive_panel"):
-                    ml._archive_panel._refresh()
-                if hasattr(ml, "_cardio_panel"):
-                    ml._cardio_panel._refresh()
+                # 资料馆/有氧页在切页时惰性刷新（见 MainLayout._on_screen_changed）
             except Exception:
                 pass
         if ok:

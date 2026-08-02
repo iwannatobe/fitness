@@ -124,6 +124,18 @@ class MainLayout(FloatLayout):
         self._boot_overlay = BootOverlay()
         self.add_widget(self._boot_overlay)
         Clock.schedule_once(lambda _dt: self._boot_overlay.finish(), 0.82)
+        # 切到资料馆/有氧页时才惰性刷新，避免每次完成训练重建大网格卡顿
+        self.sm.bind(current=self._on_screen_changed)
+
+    def _on_screen_changed(self, _sm, name):
+        # 延迟到切页动画后刷新，避免占用动画帧
+        Clock.schedule_once(lambda dt, n=name: self._refresh_panel_for(n), 0.25)
+
+    def _refresh_panel_for(self, name):
+        if name == "archive" and hasattr(self, "_archive_panel"):
+            self._archive_panel._refresh()
+        elif name == "cardio" and hasattr(self, "_cardio_panel"):
+            self._cardio_panel._refresh()
 
     def _build_home(self):
         root = BoxLayout(orientation="vertical",
@@ -222,8 +234,6 @@ class MainLayout(FloatLayout):
     def _on_task_completed(self):
         self.refresh_heatmap()
         if hasattr(self, "_task_card"): self._task_card.refresh()
-        if hasattr(self, "_archive_panel"): self._archive_panel._refresh()
-        if hasattr(self, "_cardio_panel"): self._cardio_panel._refresh()
         plan = db.get_today_plan()
         if plan and all(item["completed"] for item in plan):
             Clock.schedule_once(lambda _dt: show_battle_report(self), 0.35)

@@ -246,7 +246,15 @@ class SystemBus(BoxLayout):
 
     def _refresh_ai_state(self):
         try:
-            self._ai_lamp.color = theme.LED_GREEN if LLMConfig.load().is_configured else theme.VFD_ORANGE
+            from llm_config import LLMConfig
+            counter = getattr(self, "_ai_cfg_counter", 0) + 1
+            self._ai_cfg_counter = counter
+            cfg = getattr(self, "_ai_cfg_cache", None)
+            if cfg is None or counter % 10 == 0:
+                # 每 10 秒重读一次，避免每次刷新都读文件（Android 卡顿）
+                cfg = LLMConfig.load()
+                self._ai_cfg_cache = cfg
+            self._ai_lamp.color = theme.LED_GREEN if cfg.is_configured else theme.VFD_ORANGE
         except Exception:
             self._ai_lamp.color = theme.VFD_ORANGE
 

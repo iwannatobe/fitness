@@ -1583,7 +1583,8 @@ class AIChatPanel(BoxLayout):
         if cfg != self._cfg:
             self._cfg = cfg
             self._rebuild_messages()
-        return True
+        # 注意：不要 return True，否则 ModalView.dismiss() 会取消关闭
+        return None
 
     def _ensure_client(self):
         """在后台线程惰性创建 LLMClient（构造 httpx 不应阻塞主线程）。"""

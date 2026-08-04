@@ -15,6 +15,7 @@ from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
+from kivy.uix.widget import Widget
 
 from config import theme
 import database as db
@@ -42,11 +43,25 @@ class LogoEjectButton(FloatLayout):
         self.add_widget(self._logo)
 
         # back face: instrument-style red eject key.
-        # 用 widget opacity 控制显隐（Kivy 可靠地按 opacity 整体隐藏）
+        # 图形指令引用存到 self（eject），canvas 上下文里赋值给子 widget 会丢失
         self._eject_size = dp(28)
-        self._back = BoxLayout(size_hint=(None, None), size=(dp(28), dp(28)),
-                               pos_hint={"center_x": 0.5, "center_y": 0.5})
+        self._back = Widget(size_hint=(None, None), size=(dp(28), dp(28)),
+                            pos_hint={"center_x": 0.5, "center_y": 0.5})
+        with self._back.canvas:
+            Color(*theme.METAL_DARK)
+            self._back_outer = Ellipse()
+            Color(*theme.METAL_LIGHT)
+            self._back_outer_edge = Line(width=dp(1.2))
+            Color(0.72, 0.06, 0.04, 1)
+            self._back_body = Ellipse()
+            Color(0.30, 0.02, 0.02, 1)
+            self._back_body_edge = Line(width=dp(1))
+            Color(1.0, 0.55, 0.08, 1)
+            self._back_ring = Line(width=dp(1.6))
+            Color(1.0, 0.95, 0.9, 0.30)
+            self._back_gloss = Ellipse()
         self._back.bind(pos=self._sync_back, size=self._sync_back)
+        self._sync_back(self._back)
         self._back.opacity = 0
         self.add_widget(self._back)
 
@@ -61,30 +76,26 @@ class LogoEjectButton(FloatLayout):
         return pts
 
     def _sync_back(self, w, *_):
-        w.canvas.clear()
-        with w.canvas:
-            cx = w.center_x
-            cy = w.center_y
-            r = w.width / 2.0
-            # 金属外环
-            Color(*theme.METAL_DARK)
-            Ellipse(pos=w.pos, size=w.size)
-            Color(*theme.METAL_LIGHT)
-            Line(points=self._circle_pts(cx, cy, r * 0.96), width=dp(1.2))
-            # 深红主体
-            body_r = r * 0.80
-            Color(0.72, 0.06, 0.04, 1)
-            Ellipse(pos=(cx - body_r, cy - body_r), size=(body_r * 2, body_r * 2))
-            Color(0.30, 0.02, 0.02, 1)
-            Line(points=self._circle_pts(cx, cy, body_r * 0.99), width=dp(1))
-            # 橙色同心环
-            Color(1.0, 0.55, 0.08, 1)
-            Line(points=self._circle_pts(cx, cy, body_r * 0.52), width=dp(1.6))
-            # 顶部玻璃高光
-            gloss_r = body_r * 0.32
-            Color(1.0, 0.95, 0.9, 0.30)
-            Ellipse(pos=(cx - body_r * 0.35 - gloss_r, cy + body_r * 0.42 - gloss_r),
-                    size=(gloss_r * 2, gloss_r * 2))
+        cx = w.center_x
+        cy = w.center_y
+        r = w.width / 2.0
+        # 金属外环
+        self._back_outer.pos = w.pos
+        self._back_outer.size = w.size
+        self._back_outer_edge.points = self._circle_pts(cx, cy, r * 0.96)
+        # 深红主体
+        body_r = r * 0.80
+        self._back_body.pos = (cx - body_r, cy - body_r)
+        self._back_body.size = (body_r * 2, body_r * 2)
+        self._back_body_edge.points = self._circle_pts(cx, cy, body_r * 0.99)
+        # 橙色同心环
+        self._back_ring.points = self._circle_pts(cx, cy, body_r * 0.52)
+        # 玻璃高光
+        gloss_r = body_r * 0.32
+        gx = cx - body_r * 0.35 - gloss_r
+        gy = cy + body_r * 0.42 - gloss_r
+        self._back_gloss.pos = (gx, gy)
+        self._back_gloss.size = (gloss_r * 2, gloss_r * 2)
 
     def _on_touch(self, widget, touch):
         if not self.collide_point(*touch.pos):
@@ -102,7 +113,8 @@ class LogoEjectButton(FloatLayout):
         anim_logo = Animation(opacity=0, duration=0.12)
         anim_logo.bind(on_complete=lambda *_: self._finish_open())
         anim_logo.start(self._logo)
-        # red key 淡入
+        # 确保红色按钮图形位置正确后淡入
+        self._sync_back(self._back)
         self._back.opacity = 0
         Animation(opacity=1, duration=0.18).start(self._back)
         # 翻盖完成后自动弹确认框

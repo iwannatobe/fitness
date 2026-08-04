@@ -112,7 +112,9 @@ class LogoEjectButton(FloatLayout):
         # 翻盖完成后自动弹确认框
         Clock.schedule_once(lambda dt: self._on_eject(), 0.22)
 
-    def _flip_close(self):
+    def _flip_close(self, *_):
+        if not self._eject_visible:
+            return
         self._animating = True
         sounds.play_click()
         self._eject_visible = False
@@ -176,14 +178,16 @@ class LogoEjectButton(FloatLayout):
         btn_row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(10))
         cancel = Button(text="取消", background_normal="", background_color=theme.METAL_DARK,
                         color=theme.TEXT_PRIMARY, font_size=dp(14))
-        cancel.bind(on_release=lambda _: (popup.dismiss(), self._flip_close()))
+        cancel.bind(on_release=lambda _: popup.dismiss())
         btn_row.add_widget(cancel)
         confirm = Button(text="导出", background_normal="", background_color=theme.LED_RED,
                          color=(1, 1, 1, 1), font_size=dp(14), bold=True)
-        confirm.bind(on_release=lambda _: (popup.dismiss(), self._flip_close(), self._do_export()))
+        confirm.bind(on_release=lambda _: (popup.dismiss(), self._do_export()))
         btn_row.add_widget(confirm)
         root.add_widget(btn_row)
         popup.add_widget(root)
+        # 无论以何种方式关闭弹框（取消/导出/点外部），都翻回 logo 并隐藏红色按钮
+        popup.bind(on_dismiss=self._flip_close)
         popup.open()
 
     def _do_export(self):

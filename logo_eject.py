@@ -7,7 +7,7 @@ from datetime import datetime
 
 from kivy.animation import Animation
 from kivy.clock import Clock
-from kivy.graphics import Color, Line, Rectangle
+from kivy.graphics import Color, Ellipse, Line, Rectangle
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
@@ -40,21 +40,22 @@ class LogoEjectButton(FloatLayout):
                            size_hint=(1, 1), pos_hint={"center_x": 0.5, "center_y": 0.5})
         self.add_widget(self._logo)
 
-        # back face: red emergency eject key (hidden by default)
+        # back face: red circular eject key with parachute icon (hidden by default)
         self._back = Button(text="", background_normal="", background_color=(0, 0, 0, 0),
-                            size_hint=(1, 1), pos_hint={"center_x": 0.5, "center_y": 0.5})
+                            size_hint=(None, None), size=(dp(40), dp(40)),
+                            pos_hint={"center_x": 0.5, "center_y": 0.5})
         with self._back.canvas.before:
             Color(*theme.LED_RED)
-            self._back_bg = Rectangle(pos=self._back.pos, size=self._back.size)
+            self._back_bg = Ellipse(pos=self._back.pos, size=self._back.size)
             Color(0.95, 0.97, 0.95, 1)
-            self._back_edge = Line(rectangle=(*self._back.pos, *self._back.size), width=dp(1.5))
+            self._back_edge = Line(ellipse=(*self._back.pos, *self._back.size), width=dp(1.5))
         self._back.bind(
             pos=lambda w, _: (setattr(self._back_bg, "pos", w.pos),
-                              setattr(self._back_edge, "rectangle", (*w.pos, w.width, w.height))),
+                              setattr(self._back_edge, "ellipse", (*w.pos, w.width, w.height))),
             size=lambda w, _: (setattr(self._back_bg, "size", w.size),
-                               setattr(self._back_edge, "rectangle", (*w.pos, w.width, w.height))))
-        eject = Label(text="[color=ffffff][b]EJECT\n导出[/b][/color]", markup=True,
-                      color=(1, 1, 1, 1), font_size=dp(9), halign="center", valign="middle")
+                               setattr(self._back_edge, "ellipse", (*w.pos, w.width, w.height))))
+        eject = Label(text="\u2602", color=(1, 1, 1, 1), font_size=dp(20),
+                      halign="center", valign="middle")
         eject.bind(size=eject.setter("text_size"))
         self._back.add_widget(eject)
         self._back.opacity = 0
@@ -152,7 +153,7 @@ class LogoEjectButton(FloatLayout):
         btn_row.add_widget(cancel)
         confirm = Button(text="导出", background_normal="", background_color=theme.LED_RED,
                          color=(1, 1, 1, 1), font_size=dp(14), bold=True)
-        confirm.bind(on_release=lambda _: (popup.dismiss(), self._do_export()))
+        confirm.bind(on_release=lambda _: (popup.dismiss(), self._flip_close(), self._do_export()))
         btn_row.add_widget(confirm)
         root.add_widget(btn_row)
         popup.add_widget(root)
@@ -195,7 +196,7 @@ class LogoEjectButton(FloatLayout):
         ok_btn = Button(text="完成", background_normal="", background_color=theme.METAL_DARK,
                         color=theme.TEXT_PRIMARY, font_size=dp(14),
                         size_hint_y=None, height=dp(40))
-        ok_btn.bind(on_release=lambda _: (popup.dismiss(), self._flip_close()))
+        ok_btn.bind(on_release=lambda _: popup.dismiss())
         root.add_widget(ok_btn)
         popup.add_widget(root)
         popup.open()

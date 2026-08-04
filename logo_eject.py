@@ -28,7 +28,8 @@ class LogoEjectButton(FloatLayout):
     """
 
     def __init__(self, **kwargs):
-        super().__init__(size_hint=(1, 1), **kwargs)
+        super().__init__(**kwargs)
+        self.size_hint = (1, 1)
         self._open = False
         self._animating = False
         self._busy = False
@@ -36,11 +37,12 @@ class LogoEjectButton(FloatLayout):
         # front face: the app logo
         logo_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "icon.png")
         self._logo = Image(source=logo_path, allow_stretch=True, keep_ratio=True,
-                           size_hint=(1, 1))
+                           size_hint=(1, 1), pos_hint={"center_x": 0.5, "center_y": 0.5})
         self.add_widget(self._logo)
 
         # back face: red emergency eject key (hidden by default)
-        self._back = Button(text="", background_normal="", background_color=(0, 0, 0, 0))
+        self._back = Button(text="", background_normal="", background_color=(0, 0, 0, 0),
+                            size_hint=(1, 1), pos_hint={"center_x": 0.5, "center_y": 0.5})
         with self._back.canvas.before:
             Color(*theme.LED_RED)
             self._back_bg = Rectangle(pos=self._back.pos, size=self._back.size)
@@ -55,7 +57,6 @@ class LogoEjectButton(FloatLayout):
                       color=(1, 1, 1, 1), font_size=dp(9), halign="center", valign="middle")
         eject.bind(size=eject.setter("text_size"))
         self._back.add_widget(eject)
-        self._back.bind(on_release=lambda _: self._on_eject())
         self._back.opacity = 0
         self.add_widget(self._back)
 
@@ -67,10 +68,11 @@ class LogoEjectButton(FloatLayout):
             return False
         if self._busy or self._animating:
             return True
-        if not self._open:
-            self._flip_open()
+        if self._open:
+            # 已翻盖：点红色按钮触发导出确认
+            self._on_eject()
         else:
-            self._flip_close()
+            self._flip_open()
         return True
 
     def _flip_open(self):

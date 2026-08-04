@@ -4,6 +4,7 @@ EMERGENCY EJECT key that exports the fitness data as a backup file.
 
 import os
 from datetime import datetime
+from math import cos as _cos, sin as _sin
 
 from kivy.animation import Animation
 from kivy.clock import Clock
@@ -41,18 +42,17 @@ class LogoEjectButton(FloatLayout):
                            size_hint=(1, 1), pos_hint={"center_x": 0.5, "center_y": 0.5})
         self.add_widget(self._logo)
 
-        # back face: red circular eject key with parachute icon (hidden by default)
+        # back face: red circular eject key with orange inner ring (hidden by default)
         # 图形画在 eject 自身的 canvas.after（避开 Button.canvas.before 的属性丢失问题）
         self._eject_size = dp(26)
-        self._eject_g = {"bg": None, "edge": None, "parachute": None, "jumper": None}
+        self._eject_g = {"bg": None, "edge": None, "ring": None}
         with self.canvas.after:
             Color(*theme.LED_RED)
             self._eject_g["bg"] = Ellipse()
             Color(0.95, 0.97, 0.95, 1)
             self._eject_g["edge"] = Line(width=dp(1))
-            Color(1, 1, 1, 1)
-            self._eject_g["parachute"] = Line(width=dp(1.2))
-            self._eject_g["jumper"] = Ellipse()
+            Color(1.0, 0.45, 0.0, 1)  # 橙色内圈
+            self._eject_g["ring"] = Line(width=dp(2))
         self._back = Button(text="", background_normal="", background_color=(0, 0, 0, 0),
                             size_hint=(None, None), size=(dp(26), dp(26)),
                             pos_hint={"center_x": 0.5, "center_y": 0.5})
@@ -71,9 +71,7 @@ class LogoEjectButton(FloatLayout):
             g["bg"].pos = (-1000, -1000)
             g["bg"].size = (0, 0)
             g["edge"].ellipse = (-1000, -1000, 0, 0)
-            g["parachute"].points = []
-            g["jumper"].pos = (-1000, -1000)
-            g["jumper"].size = (0, 0)
+            g["ring"].points = []
             return
         cx = self.center_x
         cy = self.center_y
@@ -81,35 +79,21 @@ class LogoEjectButton(FloatLayout):
         g["bg"].pos = (cx - r, cy - r)
         g["bg"].size = (r * 2, r * 2)
         g["edge"].ellipse = (cx - r, cy - r, r * 2, r * 2)
-        top = cy + r * 0.55
-        bottom = cy - r * 0.6
-        pr = r * 0.72
-        # canopy: upward arc
+        # 橙色内圈（圆用多点折线逼近）
+        ring_r = r * 0.45
         pts = []
-        for i in range(9):
-            t = i / 8.0
-            px = cx - pr + 2 * pr * t
-            py = top + (pr * 0.35) * ((t * 2 - 1) ** 2)
-            pts.extend([px, py])
-        # shroud lines
-        pts.extend([cx - pr, top, cx - pr * 0.5, bottom])
-        pts.extend([cx + pr, top, cx + pr * 0.5, bottom])
-        pts.extend([cx, top, cx, bottom])
-        g["parachute"].points = pts
-        jr = r * 0.22
-        g["jumper"].pos = (cx - jr, bottom - jr)
-        g["jumper"].size = (jr * 2, jr * 2)
+        for i in range(24):
+            a = 6.2831853 * i / 24.0
+            pts.extend([cx + ring_r * _cos(a), cy + ring_r * _sin(a)])
+        g["ring"].points = pts
 
     def _on_touch(self, widget, touch):
         if not self.collide_point(*touch.pos):
             return False
         if self._busy or self._animating:
             return True
-        if self._open:
-            # 已翻盖：点红色按钮触发导出确认
-            self._on_eject()
-        else:
-            self._flip_open()
+        # 点一下：翻盖露出红色按钮 + 自动弹导出确认框
+        self._flip_open()
         return True
 
     def _flip_open(self):
@@ -117,7 +101,6 @@ class LogoEjectButton(FloatLayout):
         sounds.play_click()
         self._eject_visible = True
         self._sync_eject_g()
-        # flip: logo fades out, red key fades in
         anim = Animation(opacity=0, duration=0.10) + \
                Animation(opacity=1, duration=0.16)
         anim.bind(on_start=self._show_back)
@@ -126,10 +109,14 @@ class LogoEjectButton(FloatLayout):
         self._back_anim = Animation(opacity=0, duration=0.0) + \
                           Animation(opacity=1, duration=0.18)
         self._back_anim.start(self._back)
+        # 翻盖完成后自动弹确认框
+        Clock.schedule_once(lambda dt: self._on_eject(), 0.22)
 
     def _flip_close(self):
         self._animating = True
         sounds.play_click()
+        self._eject_visible = False
+        self._sync_eject_g()
         anim = Animation(opacity=0, duration=0.10) + \
                Animation(opacity=1, duration=0.16)
         anim.bind(on_start=self._show_front)

@@ -56,9 +56,9 @@ class ImportBackupDialog(ModalView):
         hdr.add_widget(close)
         root.add_widget(hdr)
 
-        tip = Label(text="选择之前导出的备份文件（fitness_backup.json）以恢复数据。\n重复的记录会自动跳过。",
-                    color=theme.TEXT_MUTED, font_size=dp(11), size_hint_y=None,
-                    height=dp(34), halign="left", valign="middle")
+        tip = Label(text="选择之前导出的备份文件（fitness_backup.json）以恢复数据。\n重复的记录会自动跳过。\n[color=88ccff]导出数据：点击顶部中间的 logo 即可[/color]",
+                    markup=True, color=theme.TEXT_MUTED, font_size=dp(11), size_hint_y=None,
+                    height=dp(48), halign="left", valign="middle")
         tip.bind(size=tip.setter("text_size"))
         root.add_widget(tip)
 

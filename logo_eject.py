@@ -41,16 +41,11 @@ class LogoEjectButton(FloatLayout):
                            size_hint=(1, 1), pos_hint={"center_x": 0.5, "center_y": 0.5})
         self.add_widget(self._logo)
 
-        # back face: red circular eject key with orange inner ring.
+        # back face: instrument-style red eject key.
         # 用 widget opacity 控制显隐（Kivy 可靠地按 opacity 整体隐藏）
-        self._eject_size = dp(26)
-        self._back = BoxLayout(size_hint=(None, None), size=(dp(26), dp(26)),
+        self._eject_size = dp(28)
+        self._back = BoxLayout(size_hint=(None, None), size=(dp(28), dp(28)),
                                pos_hint={"center_x": 0.5, "center_y": 0.5})
-        with self._back.canvas:
-            Color(*theme.LED_RED)
-            self._back_bg = Ellipse(pos=self._back.pos, size=self._back.size)
-            Color(1.0, 0.45, 0.0, 1)  # 橙色内圈
-            self._back_ring = Line(width=dp(2))
         self._back.bind(pos=self._sync_back, size=self._sync_back)
         self._back.opacity = 0
         self.add_widget(self._back)
@@ -58,17 +53,38 @@ class LogoEjectButton(FloatLayout):
         # touch handling on the whole widget
         self.bind(on_touch_down=self._on_touch)
 
-    def _sync_back(self, w, *_):
-        self._back_bg.pos = w.pos
-        self._back_bg.size = w.size
-        cx = w.center_x
-        cy = w.center_y
-        ring_r = w.width * 0.38
+    def _circle_pts(self, cx, cy, r, n=28):
         pts = []
-        for i in range(24):
-            a = 6.2831853 * i / 24.0
-            pts.extend([cx + ring_r * _cos(a), cy + ring_r * _sin(a)])
-        self._back_ring.points = pts
+        for i in range(n):
+            a = 6.2831853 * i / n
+            pts.extend([cx + r * _cos(a), cy + r * _sin(a)])
+        return pts
+
+    def _sync_back(self, w, *_):
+        w.canvas.clear()
+        with w.canvas:
+            cx = w.center_x
+            cy = w.center_y
+            r = w.width / 2.0
+            # 金属外环
+            Color(*theme.METAL_DARK)
+            Ellipse(pos=w.pos, size=w.size)
+            Color(*theme.METAL_LIGHT)
+            Line(points=self._circle_pts(cx, cy, r * 0.96), width=dp(1.2))
+            # 深红主体
+            body_r = r * 0.80
+            Color(0.72, 0.06, 0.04, 1)
+            Ellipse(pos=(cx - body_r, cy - body_r), size=(body_r * 2, body_r * 2))
+            Color(0.30, 0.02, 0.02, 1)
+            Line(points=self._circle_pts(cx, cy, body_r * 0.99), width=dp(1))
+            # 橙色同心环
+            Color(1.0, 0.55, 0.08, 1)
+            Line(points=self._circle_pts(cx, cy, body_r * 0.52), width=dp(1.6))
+            # 顶部玻璃高光
+            gloss_r = body_r * 0.32
+            Color(1.0, 0.95, 0.9, 0.30)
+            Ellipse(pos=(cx - body_r * 0.35 - gloss_r, cy + body_r * 0.42 - gloss_r),
+                    size=(gloss_r * 2, gloss_r * 2))
 
     def _on_touch(self, widget, touch):
         if not self.collide_point(*touch.pos):

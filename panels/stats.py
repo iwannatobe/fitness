@@ -93,6 +93,16 @@ class StatsPanel(BoxLayout):
         wt_bar.add_widget(Label(text="kg", color=theme.TEXT_MUTED,
                                 font_size=dp(theme.FONT_LABEL), size_hint_x=None, width=dp(24)))
         wt_bar.add_widget(Label(text="", size_hint_x=1))
+        imp_btn = Button(text="导入历史", size_hint=(None, None), size=(dp(70), dp(30)),
+                         background_normal="", background_color=theme.METAL_DARK,
+                         color=theme.VFD_CYAN, font_size=dp(theme.FONT_LABEL), bold=True)
+        with imp_btn.canvas.before:
+            Color(*theme.BORDER)
+            imp_btn._edge = Line(rectangle=(0, 0, 0, 0), width=dp(1))
+        imp_btn.bind(pos=lambda w, _: setattr(w._edge, "rectangle", (w.x, w.y, w.width, w.height)),
+                     size=lambda w, _: setattr(w._edge, "rectangle", (w.x, w.y, w.width, w.height)))
+        imp_btn.bind(on_release=lambda _: self._open_import())
+        wt_bar.add_widget(imp_btn)
         self._content.add_widget(wt_bar)
 
         self._content.add_widget(Label(text="今日汇总", color=theme.VFD_ORANGE,
@@ -253,6 +263,11 @@ class StatsPanel(BoxLayout):
             db.set_user_weight(date.today().isoformat(), float(value))
         except ValueError:
             pass
+
+    def _open_import(self):
+        from import_backup import ImportBackupDialog
+        popup = ImportBackupDialog(on_done=lambda: self.refresh())
+        popup.open()
 
 
 class ChartWidget(BoxLayout):

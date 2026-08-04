@@ -395,8 +395,8 @@ class TopBar(BoxLayout):
         self._channel_display = ChannelDisplay(title_text)
         self.add_widget(self._channel_display)
         logo_holder = BoxLayout(size_hint_x=1, padding=[dp(2), dp(3)])
-        logo_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "icon.png")
-        logo_holder.add_widget(Image(source=logo_path, allow_stretch=True, keep_ratio=True))
+        from logo_eject import LogoEjectButton
+        logo_holder.add_widget(LogoEjectButton())
         self.add_widget(logo_holder)
         self._system_bus = SystemBus()
         self.add_widget(self._system_bus)

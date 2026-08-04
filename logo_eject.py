@@ -33,6 +33,7 @@ class LogoEjectButton(FloatLayout):
         self._open = False
         self._animating = False
         self._busy = False
+        self._eject_visible = False
 
         # front face: the app logo
         logo_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "icon.png")
@@ -41,28 +42,63 @@ class LogoEjectButton(FloatLayout):
         self.add_widget(self._logo)
 
         # back face: red circular eject key with parachute icon (hidden by default)
-        self._back = Button(text="", background_normal="", background_color=(0, 0, 0, 0),
-                            size_hint=(None, None), size=(dp(40), dp(40)),
-                            pos_hint={"center_x": 0.5, "center_y": 0.5})
-        with self._back.canvas.before:
+        # 图形画在 eject 自身的 canvas.after（避开 Button.canvas.before 的属性丢失问题）
+        self._eject_size = dp(26)
+        self._eject_g = {"bg": None, "edge": None, "parachute": None, "jumper": None}
+        with self.canvas.after:
             Color(*theme.LED_RED)
-            self._back_bg = Ellipse(pos=self._back.pos, size=self._back.size)
+            self._eject_g["bg"] = Ellipse()
             Color(0.95, 0.97, 0.95, 1)
-            self._back_edge = Line(ellipse=(*self._back.pos, *self._back.size), width=dp(1.5))
-        self._back.bind(
-            pos=lambda w, _: (setattr(self._back_bg, "pos", w.pos),
-                              setattr(self._back_edge, "ellipse", (*w.pos, w.width, w.height))),
-            size=lambda w, _: (setattr(self._back_bg, "size", w.size),
-                               setattr(self._back_edge, "ellipse", (*w.pos, w.width, w.height))))
-        eject = Label(text="\u2602", color=(1, 1, 1, 1), font_size=dp(20),
-                      halign="center", valign="middle")
-        eject.bind(size=eject.setter("text_size"))
-        self._back.add_widget(eject)
+            self._eject_g["edge"] = Line(width=dp(1))
+            Color(1, 1, 1, 1)
+            self._eject_g["parachute"] = Line(width=dp(1.2))
+            self._eject_g["jumper"] = Ellipse()
+        self._back = Button(text="", background_normal="", background_color=(0, 0, 0, 0),
+                            size_hint=(None, None), size=(dp(26), dp(26)),
+                            pos_hint={"center_x": 0.5, "center_y": 0.5})
         self._back.opacity = 0
         self.add_widget(self._back)
+        self.bind(pos=self._sync_eject_g, size=self._sync_eject_g)
+        self._sync_eject_g()
 
         # touch handling on the whole widget
         self.bind(on_touch_down=self._on_touch)
+
+    def _sync_eject_g(self, *_):
+        g = self._eject_g
+        visible = getattr(self, "_eject_visible", False)
+        if not visible:
+            g["bg"].pos = (-1000, -1000)
+            g["bg"].size = (0, 0)
+            g["edge"].ellipse = (-1000, -1000, 0, 0)
+            g["parachute"].points = []
+            g["jumper"].pos = (-1000, -1000)
+            g["jumper"].size = (0, 0)
+            return
+        cx = self.center_x
+        cy = self.center_y
+        r = self._eject_size / 2.0
+        g["bg"].pos = (cx - r, cy - r)
+        g["bg"].size = (r * 2, r * 2)
+        g["edge"].ellipse = (cx - r, cy - r, r * 2, r * 2)
+        top = cy + r * 0.55
+        bottom = cy - r * 0.6
+        pr = r * 0.72
+        # canopy: upward arc
+        pts = []
+        for i in range(9):
+            t = i / 8.0
+            px = cx - pr + 2 * pr * t
+            py = top + (pr * 0.35) * ((t * 2 - 1) ** 2)
+            pts.extend([px, py])
+        # shroud lines
+        pts.extend([cx - pr, top, cx - pr * 0.5, bottom])
+        pts.extend([cx + pr, top, cx + pr * 0.5, bottom])
+        pts.extend([cx, top, cx, bottom])
+        g["parachute"].points = pts
+        jr = r * 0.22
+        g["jumper"].pos = (cx - jr, bottom - jr)
+        g["jumper"].size = (jr * 2, jr * 2)
 
     def _on_touch(self, widget, touch):
         if not self.collide_point(*touch.pos):
@@ -79,7 +115,9 @@ class LogoEjectButton(FloatLayout):
     def _flip_open(self):
         self._animating = True
         sounds.play_click()
-        # flip: logo fades/squashes out, red key expands in
+        self._eject_visible = True
+        self._sync_eject_g()
+        # flip: logo fades out, red key fades in
         anim = Animation(opacity=0, duration=0.10) + \
                Animation(opacity=1, duration=0.16)
         anim.bind(on_start=self._show_back)
@@ -106,6 +144,8 @@ class LogoEjectButton(FloatLayout):
 
     def _show_front(self, *_):
         self._logo.opacity = 0
+        self._eject_visible = False
+        self._sync_eject_g()
 
     def _finish_open(self):
         self._animating = False

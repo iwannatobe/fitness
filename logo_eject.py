@@ -34,7 +34,6 @@ class LogoEjectButton(FloatLayout):
         self._open = False
         self._animating = False
         self._busy = False
-        self._eject_visible = False
 
         # front face: the app logo
         logo_path = os.path.join(os.path.dirname(__file__), "assets", "icons", "icon.png")
@@ -42,50 +41,34 @@ class LogoEjectButton(FloatLayout):
                            size_hint=(1, 1), pos_hint={"center_x": 0.5, "center_y": 0.5})
         self.add_widget(self._logo)
 
-        # back face: red circular eject key with orange inner ring (hidden by default)
-        # 图形画在 eject 自身的 canvas.after（避开 Button.canvas.before 的属性丢失问题）
+        # back face: red circular eject key with orange inner ring.
+        # 用 widget opacity 控制显隐（Kivy 可靠地按 opacity 整体隐藏）
         self._eject_size = dp(26)
-        self._eject_g = {"bg": None, "edge": None, "ring": None}
-        with self.canvas.after:
+        self._back = BoxLayout(size_hint=(None, None), size=(dp(26), dp(26)),
+                               pos_hint={"center_x": 0.5, "center_y": 0.5})
+        with self._back.canvas:
             Color(*theme.LED_RED)
-            self._eject_g["bg"] = Ellipse()
-            Color(0.95, 0.97, 0.95, 1)
-            self._eject_g["edge"] = Line(width=dp(1))
+            self._back_bg = Ellipse(pos=self._back.pos, size=self._back.size)
             Color(1.0, 0.45, 0.0, 1)  # 橙色内圈
-            self._eject_g["ring"] = Line(width=dp(2))
-        self._back = Button(text="", background_normal="", background_color=(0, 0, 0, 0),
-                            size_hint=(None, None), size=(dp(26), dp(26)),
-                            pos_hint={"center_x": 0.5, "center_y": 0.5})
+            self._back_ring = Line(width=dp(2))
+        self._back.bind(pos=self._sync_back, size=self._sync_back)
         self._back.opacity = 0
         self.add_widget(self._back)
-        self.bind(pos=self._sync_eject_g, size=self._sync_eject_g)
-        self._sync_eject_g()
 
         # touch handling on the whole widget
         self.bind(on_touch_down=self._on_touch)
 
-    def _sync_eject_g(self, *_):
-        g = self._eject_g
-        visible = getattr(self, "_eject_visible", False)
-        if not visible:
-            g["bg"].pos = (-1000, -1000)
-            g["bg"].size = (0, 0)
-            g["edge"].ellipse = (-1000, -1000, 0, 0)
-            g["ring"].points = []
-            return
-        cx = self.center_x
-        cy = self.center_y
-        r = self._eject_size / 2.0
-        g["bg"].pos = (cx - r, cy - r)
-        g["bg"].size = (r * 2, r * 2)
-        g["edge"].ellipse = (cx - r, cy - r, r * 2, r * 2)
-        # 橙色内圈（圆用多点折线逼近）
-        ring_r = r * 0.45
+    def _sync_back(self, w, *_):
+        self._back_bg.pos = w.pos
+        self._back_bg.size = w.size
+        cx = w.center_x
+        cy = w.center_y
+        ring_r = w.width * 0.38
         pts = []
         for i in range(24):
             a = 6.2831853 * i / 24.0
             pts.extend([cx + ring_r * _cos(a), cy + ring_r * _sin(a)])
-        g["ring"].points = pts
+        self._back_ring.points = pts
 
     def _on_touch(self, widget, touch):
         if not self.collide_point(*touch.pos):
@@ -99,42 +82,28 @@ class LogoEjectButton(FloatLayout):
     def _flip_open(self):
         self._animating = True
         sounds.play_click()
-        self._eject_visible = True
-        self._sync_eject_g()
-        anim = Animation(opacity=0, duration=0.10) + \
-               Animation(opacity=1, duration=0.16)
-        anim.bind(on_start=self._show_back)
-        anim.bind(on_complete=lambda *_: self._finish_open())
-        anim.start(self._logo)
-        self._back_anim = Animation(opacity=0, duration=0.0) + \
-                          Animation(opacity=1, duration=0.18)
-        self._back_anim.start(self._back)
+        # logo 淡出
+        anim_logo = Animation(opacity=0, duration=0.12)
+        anim_logo.bind(on_complete=lambda *_: self._finish_open())
+        anim_logo.start(self._logo)
+        # red key 淡入
+        self._back.opacity = 0
+        Animation(opacity=1, duration=0.18).start(self._back)
         # 翻盖完成后自动弹确认框
-        Clock.schedule_once(lambda dt: self._on_eject(), 0.22)
+        Clock.schedule_once(lambda dt: self._on_eject(), 0.2)
 
     def _flip_close(self, *_):
-        if not self._eject_visible:
+        if self._logo.opacity == 1 and self._back.opacity == 0:
             return
         self._animating = True
         sounds.play_click()
-        self._eject_visible = False
-        self._sync_eject_g()
-        anim = Animation(opacity=0, duration=0.10) + \
-               Animation(opacity=1, duration=0.16)
-        anim.bind(on_start=self._show_front)
-        anim.bind(on_complete=lambda *_: self._finish_close())
-        anim.start(self._back)
-        self._logo_anim = Animation(opacity=0, duration=0.0) + \
-                          Animation(opacity=1, duration=0.18)
-        self._logo_anim.start(self._logo)
-
-    def _show_back(self, *_):
-        self._back.opacity = 0
-
-    def _show_front(self, *_):
+        # logo 淡入
         self._logo.opacity = 0
-        self._eject_visible = False
-        self._sync_eject_g()
+        Animation(opacity=1, duration=0.18).start(self._logo)
+        # red key 淡出
+        anim_back = Animation(opacity=0, duration=0.12)
+        anim_back.bind(on_complete=lambda *_: self._finish_close())
+        anim_back.start(self._back)
 
     def _finish_open(self):
         self._animating = False
